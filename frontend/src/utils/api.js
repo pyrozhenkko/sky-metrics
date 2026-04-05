@@ -5,8 +5,11 @@ export async function callApi(file) {
     const formData = new FormData();
     formData.append("file", file);
 
+    const token = localStorage.getItem("jwt_token");
+
     const response = await fetch('http://localhost:8080/api/flights/upload', {
       method: 'POST',
+      headers: token ? { "Authorization": `Bearer ${token}` } : {},
       body: formData,
     });
 
@@ -17,14 +20,17 @@ export async function callApi(file) {
 
     const data = await response.json();
 
-    if (!data.status || data.status !== 'success' || !data.data || !data.data.metrics || !data.data.trajectory) {
-      throw new Error('Невірний формат відповіді від сервера');
+    if (!data.metrics || !data.trajectory) {
+      throw new Error('Невірний формат відповіді від сервера (відсутні метрики або траєкторія)');
     }
 
-    return data;
+    // Wrap in standard response format for FlightDashboard.jsx which expects `response.data.metrics`
+    return {
+      status: "success",
+      data: data
+    };
   } catch (error) {
-    console.warn('API не доступний, використовую mock дані:', error.message);
-    await new Promise((r) => setTimeout(r, 2000));
-    return generateMockResponse();
+    console.error('API Error:', error.message);
+    throw error;
   }
 }

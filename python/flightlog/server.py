@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+import tempfile
+import shutil
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
 
 from flightlog.analysis import build_mission_json
 
@@ -16,60 +17,30 @@ _INPUT_ROOT = (_PROGRAM_ROOT / "input").resolve()
 app = FastAPI(title="Flight log analyzer")
 
 
-def _resolve_input_bin(path_param: str) -> Path:
-    s = path_param.strip().replace("\\", "/")
-    if not s or s.startswith("/") or ".." in Path(s).parts:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid path",
-        )
-    if "/" not in s:
-        resolved = (_INPUT_ROOT / s).resolve()
-    else:
-        resolved = (_PROGRAM_ROOT / s).resolve()
-    try:
-        resolved.relative_to(_INPUT_ROOT)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail="File must be inside the input directory",
-        ) from exc
-    if not resolved.is_file():
-        raise HTTPException(status_code=404, detail="File not found")
-    size = resolved.stat().st_size
-    if size == 0:
-        raise HTTPException(status_code=400, detail="Empty file")
-    if size > MAX_BIN_BYTES:
-        raise HTTPException(
-            status_code=413,
-            detail="File exceeds size limit",
-        )
-    return resolved
-
-
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-class AnalyzeRequest(BaseModel):
-    path: str = Field(
-        ...,
-        min_length=1,
-        examples=["input/00000001.BIN"],
-    )
-
-
 @app.post("/analyze")
-async def analyze(body: AnalyzeRequest) -> JSONResponse:
-    bin_path = _resolve_input_bin(body.path)
+async def analyze(file: UploadFile = File(...)) -> JSONResponse:
+    if file.size and file.size > MAX_BIN_BYTES:
+        raise HTTPException(status_code=413, detail="File exceeds size limit")
+        
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        tmp_path = Path(tmp.name)
+        
     try:
-        payload = build_mission_json(bin_path)
+        payload = build_mission_json(tmp_path)
     except Exception as exc:
         raise HTTPException(
             status_code=422,
             detail=f"Failed to parse Dataflash: {exc!s}",
         ) from exc
+    finally:
+        tmp_path.unlink()
+        
     return JSONResponse(content=payload)
 
 
