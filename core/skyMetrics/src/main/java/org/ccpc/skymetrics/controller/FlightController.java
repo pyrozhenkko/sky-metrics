@@ -36,15 +36,28 @@ public class FlightController {
             return ResponseEntity.badRequest().body("File is empty");
         }
 
-        FlightSession initialSession = sessionService.createInitialSession(file.getOriginalFilename(), userDetails.getId());
-
-        PythonAnalysisResponse pythonResponse = pythonService.analyzeLogFile(file);
-
+        FlightSession initialSession = null;
         try {
+            initialSession = sessionService.createInitialSession(file.getOriginalFilename(), userDetails.getId());
+
+            PythonAnalysisResponse pythonResponse = pythonService.analyzeLogFile(file);
+
+            if (pythonResponse == null) {
+                return ResponseEntity.internalServerError()
+                        .body("Python service returned no response");
+            }
+
             FlightDetailResponse result = sessionService.processAndSaveResults(initialSession.getId(), pythonResponse);
             return ResponseEntity.ok(result);
+
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(e.getMessage());
+            // Log the real exception message so it's visible in docker logs
+            System.err.println("[UPLOAD ERROR] " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            if (e.getCause() != null) {
+                System.err.println("[UPLOAD CAUSE] " + e.getCause().getMessage());
+            }
+            return ResponseEntity.internalServerError()
+                    .body("Upload failed: " + e.getMessage());
         }
     }
 
