@@ -55,8 +55,9 @@ export default function UploadScreen({
       const response = await callApi(file);
       setAnalyzing(false);
       onAnalyzed(file.name, response);
-    } catch {
-      setError("Помилка аналізу. Спробуйте ще раз.");
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : String(e);
+      setError(raw?.trim() || "Помилка аналізу. Спробуйте ще раз.");
       setAnalyzing(false);
     }
   };
@@ -160,7 +161,17 @@ export default function UploadScreen({
               </p>
 
               {error && (
-                <p className="text-red-400 text-xs mb-4 text-center" style={{ fontFamily: MONO }}>{error}</p>
+                <div
+                  role="alert"
+                  className="mb-4 w-full max-w-sm rounded-xl border border-red-500/25 bg-red-950/35 px-3 py-2.5 text-left"
+                >
+                  <p className="text-red-200 text-xs font-medium mb-1" style={{ fontFamily: MONO }}>
+                    Не вдалося проаналізувати файл
+                  </p>
+                  <p className="text-red-300/95 text-[11px] leading-relaxed break-words whitespace-pre-wrap" style={{ fontFamily: MONO }}>
+                    {error}
+                  </p>
+                </div>
               )}
 
               <button

@@ -151,16 +151,44 @@ export default function AIAssistantPanel({ metrics, trajectory, meta, aiSummary 
     };
 
     try {
-      const response = await fetch(`${API_BASE}/api/llm/ai-report`, {
-        method: 'POST',
-        headers: authHeadersJson(),
-        body: JSON.stringify(flightPayload),
-      });
+      let response;
+      try {
+        response = await fetch(`${API_BASE}/api/llm/ai-report`, {
+          method: 'POST',
+          headers: authHeadersJson(),
+          body: JSON.stringify(flightPayload),
+        });
+      } catch (netErr) {
+        const m = netErr instanceof Error ? netErr.message : String(netErr);
+        const low = m.toLowerCase();
+        if (low.includes('failed to fetch') || low.includes('networkerror') || low.includes('load failed')) {
+          throw new Error(
+            `Немає стабільного звʼязку з API (${API_BASE}). Переконайтесь, що backend запущений; після довгого запиту до Gemini зʼєднання інколи обривається — спробуйте ще раз.`,
+          );
+        }
+        throw new Error(m || 'Помилка мережі');
+      }
 
-      const data = await response.json().catch(() => ({}));
+      const raw = await response.text();
+      let data = {};
+      if (raw.trim()) {
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          data = {};
+        }
+      }
 
       if (!response.ok && data.summary == null && data.title == null) {
-        throw new Error(typeof data.detail === 'string' ? data.detail : `HTTP ${response.status}`);
+        const hint =
+          typeof data.detail === 'string'
+            ? data.detail
+            : typeof data.message === 'string'
+              ? data.message
+              : response.status === 502 || response.status === 504
+                ? 'Шлюз або LLM-сервіс не відповіли вчасно.'
+                : `HTTP ${response.status}`;
+        throw new Error(raw.trim() && Object.keys(data).length === 0 ? `Сервер повернув не JSON (HTTP ${response.status}).` : hint);
       }
 
       const view = buildReportView(data);

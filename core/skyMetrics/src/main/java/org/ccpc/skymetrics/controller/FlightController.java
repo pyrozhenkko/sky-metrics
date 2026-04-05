@@ -8,6 +8,7 @@ import org.ccpc.skymetrics.security.UserDetailsImpl;
 import org.ccpc.skymetrics.service.FlightSessionService;
 import org.ccpc.skymetrics.service.PythonIntegrationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
@@ -33,7 +35,9 @@ public class FlightController {
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
 
         if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("File is empty");
+            return ResponseEntity.badRequest()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("message", "Файл порожній"));
         }
 
         FlightSession initialSession = null;
@@ -44,7 +48,8 @@ public class FlightController {
 
             if (pythonResponse == null) {
                 return ResponseEntity.internalServerError()
-                        .body("Python service returned no response");
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(Map.of("message", "Сервіс аналізу не повернув відповідь"));
             }
 
             FlightDetailResponse result = sessionService.processAndSaveResults(initialSession.getId(), pythonResponse);
@@ -55,8 +60,10 @@ public class FlightController {
             if (e.getCause() != null) {
                 System.err.println("[UPLOAD CAUSE] " + e.getCause().getMessage());
             }
+            String detail = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             return ResponseEntity.internalServerError()
-                    .body("Upload failed: " + e.getMessage());
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("message", "Не вдалося обробити файл: " + detail));
         }
     }
 

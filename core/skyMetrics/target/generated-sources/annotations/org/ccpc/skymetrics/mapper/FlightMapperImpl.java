@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-04-05T21:02:45+0300",
+    date = "2026-04-05T21:15:27+0300",
     comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.45.0.v20260224-0835, environment: Java 21.0.10 (Eclipse Adoptium)"
 )
 @Component
@@ -87,14 +87,14 @@ public class FlightMapperImpl implements FlightMapper {
 
         FlightMetrics.FlightMetricsBuilder flightMetrics = FlightMetrics.builder();
 
-        flightMetrics.altitudeGainM( dto.altitudeGainM() );
         flightMetrics.flightDurationSec( dto.flightDurationSec() );
-        flightMetrics.maxAccelerationMs2( dto.maxAccelerationMs2() );
+        flightMetrics.totalDistanceM( dto.totalDistanceM() );
         flightMetrics.maxAltitudeM( dto.maxAltitudeM() );
         flightMetrics.maxHorizontalSpeedMs( dto.maxHorizontalSpeedMs() );
-        flightMetrics.maxSpeedFromImuTrapzMs( dto.maxSpeedFromImuTrapzMs() );
         flightMetrics.maxVerticalSpeedMs( dto.maxVerticalSpeedMs() );
-        flightMetrics.totalDistanceM( dto.totalDistanceM() );
+        flightMetrics.maxAccelerationMs2( dto.maxAccelerationMs2() );
+        flightMetrics.altitudeGainM( dto.altitudeGainM() );
+        flightMetrics.maxSpeedFromImuTrapzMs( dto.maxSpeedFromImuTrapzMs() );
 
         return flightMetrics.build();
     }
@@ -144,38 +144,38 @@ public class FlightMapperImpl implements FlightMapper {
 
         TrajectoryData trajectoryData = new TrajectoryData();
 
-        List<Double> list = dto.alt_m();
+        List<Double> list = dto.time();
         if ( list != null ) {
-            trajectoryData.setAlt_m( new ArrayList<Double>( list ) );
+            trajectoryData.setTime( new ArrayList<Double>( list ) );
         }
-        List<Double> list1 = dto.lat_deg();
+        List<Double> list1 = dto.x_east();
         if ( list1 != null ) {
-            trajectoryData.setLat_deg( new ArrayList<Double>( list1 ) );
+            trajectoryData.setX_east( new ArrayList<Double>( list1 ) );
         }
-        List<Double> list2 = dto.lon_deg();
+        List<Double> list2 = dto.y_north();
         if ( list2 != null ) {
-            trajectoryData.setLon_deg( new ArrayList<Double>( list2 ) );
+            trajectoryData.setY_north( new ArrayList<Double>( list2 ) );
+        }
+        List<Double> list3 = dto.z_up();
+        if ( list3 != null ) {
+            trajectoryData.setZ_up( new ArrayList<Double>( list3 ) );
         }
         trajectoryData.setReference( toEntity( dto.reference() ) );
-        List<Double> list3 = dto.speed_horizontal_m_s();
-        if ( list3 != null ) {
-            trajectoryData.setSpeed_horizontal_m_s( new ArrayList<Double>( list3 ) );
-        }
-        List<Double> list4 = dto.time();
+        List<Double> list4 = dto.lat_deg();
         if ( list4 != null ) {
-            trajectoryData.setTime( new ArrayList<Double>( list4 ) );
+            trajectoryData.setLat_deg( new ArrayList<Double>( list4 ) );
         }
-        List<Double> list5 = dto.x_east();
+        List<Double> list5 = dto.lon_deg();
         if ( list5 != null ) {
-            trajectoryData.setX_east( new ArrayList<Double>( list5 ) );
+            trajectoryData.setLon_deg( new ArrayList<Double>( list5 ) );
         }
-        List<Double> list6 = dto.y_north();
+        List<Double> list6 = dto.alt_m();
         if ( list6 != null ) {
-            trajectoryData.setY_north( new ArrayList<Double>( list6 ) );
+            trajectoryData.setAlt_m( new ArrayList<Double>( list6 ) );
         }
-        List<Double> list7 = dto.z_up();
+        List<Double> list7 = dto.speed_horizontal_m_s();
         if ( list7 != null ) {
-            trajectoryData.setZ_up( new ArrayList<Double>( list7 ) );
+            trajectoryData.setSpeed_horizontal_m_s( new ArrayList<Double>( list7 ) );
         }
 
         return trajectoryData;

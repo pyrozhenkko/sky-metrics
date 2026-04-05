@@ -27,8 +27,20 @@ export async function callApi(file) {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Помилка сервера: ${response.status}`);
+    const ct = response.headers.get("content-type") ?? "";
+    let msg = `Помилка сервера: ${response.status}`;
+    if (ct.includes("application/json")) {
+      const errorData = await response.json().catch(() => ({}));
+      if (typeof errorData.message === "string" && errorData.message.trim()) {
+        msg = errorData.message.trim();
+      }
+    } else {
+      const text = await response.text().catch(() => "");
+      if (text.trim()) {
+        msg = text.trim().length > 500 ? `${text.trim().slice(0, 500)}…` : text.trim();
+      }
+    }
+    throw new Error(msg);
   }
 
   const data = await response.json();

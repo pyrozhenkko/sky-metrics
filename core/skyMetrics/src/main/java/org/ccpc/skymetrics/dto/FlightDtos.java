@@ -1,5 +1,6 @@
 package org.ccpc.skymetrics.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -31,6 +32,7 @@ public class FlightDtos {
             JsonNode methodology
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record MetricsDto(
             @JsonProperty("flight_duration_sec") Double flightDurationSec,
             @JsonProperty("total_distance_m") Double totalDistanceM,
@@ -42,6 +44,7 @@ public class FlightDtos {
             @JsonProperty("max_speed_from_imu_trapz_m_s") Double maxSpeedFromImuTrapzMs
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record ReferenceDto(
             @JsonProperty("lat0_deg") Double lat0Deg,
             @JsonProperty("lon0_deg") Double lon0Deg,
@@ -49,6 +52,7 @@ public class FlightDtos {
             @JsonProperty("frame") String frame
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record TrajectoryDto(
             @JsonProperty("reference") ReferenceDto reference,
             @JsonProperty("time_s") List<Double> time,
@@ -61,19 +65,22 @@ public class FlightDtos {
             @JsonProperty("speed_horizontal_m_s") List<Double> speed_horizontal_m_s
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record MissionAnalysisDto(
             @JsonProperty("mission_status") String missionStatus,
             @JsonProperty("anomalies") List<String> anomalies
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record PythonAnalysisResponse(
             String status,
             JsonNode meta,
             @JsonProperty("mission_analysis") MissionAnalysisDto missionAnalysis,
             PythonData data,
-            String errorMessage
+            @JsonProperty("error_message") String errorMessage
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record PythonData(
             MetricsDto metrics,
             TrajectoryDto trajectory,
