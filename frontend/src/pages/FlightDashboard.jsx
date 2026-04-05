@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { Box } from 'lucide-react';
 import { computeSpeeds, computeAccels } from '../utils/mathUtils';
 import { generateMockResponse } from '../utils/mockData';
@@ -16,9 +16,26 @@ import MetricsGrid from '../components/dashboard/MetricsGrid';
 import TelemetryCharts from '../components/dashboard/TelemetryCharts';
 import DashboardFooter from '../components/dashboard/DashboardFooter';
 
+const TrajectoryPlaybackSection = memo(function TrajectoryPlaybackSection({ trajectory, plotlyReady, maxSp }) {
+  const [playbackIndex, setPlaybackIndex] = useState(null);
+  return (
+    <>
+      <SectionLabel text="3D-Траєкторія · ENU · Колір = Швидкість" gradient="linear-gradient(180deg,#38bdf8,#06b6d4)" />
+      <Panel title="3D Траєкторія польоту · ENU (метри від точки старту)" icon={Box} color="#38bdf8" style={{ height: 430 }}>
+        <Flight3D trajectory={trajectory} plotlyReady={plotlyReady} playbackIndex={playbackIndex} />
+      </Panel>
+      <PlaybackSlider trajectory={trajectory} onIndexChange={setPlaybackIndex} />
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 9, color: "#cbd5e1", letterSpacing: "0.06em" }}>ШВИДКІСТЬ:</span>
+        <div style={{ height: 5, flex: 1, maxWidth: 220, borderRadius: 3, background: "linear-gradient(90deg,#1e40af,#0ea5e9,#10b981,#f59e0b,#ef4444)" }} />
+        <span style={{ fontSize: 9, color: "#94a3b8" }}>0 → {maxSp.toFixed(1)} м/с</span>
+      </div>
+    </>
+  );
+});
+
 export default function FlightDashboard({ fileName = "mission_042.BIN", apiResponse = null, onBack, onAccount }) {
   const [plotlyReady, setPlotlyReady] = useState(!!window.Plotly);
-  const [playbackIndex, setPlaybackIndex] = useState(null);
   const [pdfExporting, setPdfExporting] = useState(false);
 
   useEffect(() => {
@@ -30,7 +47,10 @@ export default function FlightDashboard({ fileName = "mission_042.BIN", apiRespo
     return () => { try { document.head.removeChild(s); } catch { } };
   }, []);
 
-  const response = apiResponse || generateMockResponse();
+  const response = useMemo(() => {
+    if (apiResponse != null) return apiResponse;
+    return generateMockResponse();
+  }, [apiResponse]);
   const { metrics, trajectory } = response.data;
 
   const step = Math.max(1, Math.floor(trajectory.time.length / 100));
@@ -69,7 +89,6 @@ export default function FlightDashboard({ fileName = "mission_042.BIN", apiRespo
     }}>
       <DashboardNavbar
         onBack={onBack}
-        fileName={fileName}
         pdfExporting={pdfExporting}
         onExportPDF={handleExportPDF}
         onAccount={onAccount}
@@ -81,21 +100,7 @@ export default function FlightDashboard({ fileName = "mission_042.BIN", apiRespo
         <SectionLabel text="AI Аналітик · Автоматичний звіт" gradient="linear-gradient(180deg,#60a5fa,#818cf8)" />
         <AIAssistantPanel metrics={metrics} trajectory={trajectory} />
 
-        <SectionLabel text="3D-Траєкторія · ENU · Колір = Швидкість" gradient="linear-gradient(180deg,#38bdf8,#06b6d4)" />
-        <Panel title="3D Траєкторія польоту · ENU (метри від точки старту)" icon={Box} color="#38bdf8" style={{ height: 430 }}>
-          <Flight3D trajectory={trajectory} plotlyReady={plotlyReady} playbackIndex={playbackIndex} />
-        </Panel>
-
-        <PlaybackSlider
-          trajectory={trajectory}
-          onIndexChange={setPlaybackIndex}
-        />
-
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 9, color: "#cbd5e1", letterSpacing: "0.06em" }}>ШВИДКІСТЬ:</span>
-          <div style={{ height: 5, flex: 1, maxWidth: 220, borderRadius: 3, background: "linear-gradient(90deg,#1e40af,#0ea5e9,#10b981,#f59e0b,#ef4444)" }} />
-          <span style={{ fontSize: 9, color: "#94a3b8" }}>0 → {maxSp.toFixed(1)} м/с</span>
-        </div>
+        <TrajectoryPlaybackSection trajectory={trajectory} plotlyReady={plotlyReady} maxSp={maxSp} />
 
         <SectionLabel text="Телеметрія · 2D графіки" gradient="linear-gradient(180deg,#a78bfa,#6366f1)" />
         <TelemetryCharts chartData={chartData} maxAccelAbs={maxAccelAbs} />

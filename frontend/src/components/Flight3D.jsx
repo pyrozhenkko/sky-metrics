@@ -3,9 +3,24 @@ import { RotateCcw } from 'lucide-react';
 import { computeSpeeds } from '../utils/mathUtils';
 import { SPEED_CS, MONO } from '../utils/constants';
 
+function sceneAspectRatio(xArr, yArr, zArr, minFrac = 0.28) {
+  const span = (arr) => Math.max(1e-9, Math.max(...arr) - Math.min(...arr));
+  const dx = span(xArr);
+  const dy = span(yArr);
+  const dz = span(zArr);
+  const dMax = Math.max(dx, dy, dz);
+  return {
+    x: Math.max(dx / dMax, minFrac),
+    y: Math.max(dy / dMax, minFrac),
+    z: Math.max(dz / dMax, minFrac),
+  };
+}
+
 export default function Flight3D({ trajectory, plotlyReady, playbackIndex }) {
   const divRef = useRef();
   const hasPlotted = useRef(false);
+  const restyleRafRef = useRef(null);
+  const restyleTargetRef = useRef({ i: 0, trajectory: null });
 
   useEffect(() => {
     if (!trajectory || !plotlyReady || !window.Plotly) return;
@@ -23,10 +38,11 @@ export default function Flight3D({ trajectory, plotlyReady, playbackIndex }) {
       zerolinecolor: "rgba(255,255,255,0.1)",
       tickfont: { color: "#cbd5e1", size: 9, family: MF },
       showbackground: true,
-      backgroundcolor: "rgba(255,255,255,0.012)",
+      backgroundcolor: "rgba(10,15,26,0.42)",
     };
 
-    const pIdx = playbackIndex ?? x_east.length - 1;
+    const pIdx = x_east.length - 1;
+    const ar = sceneAspectRatio(x_east, y_north, z_up);
 
     window.Plotly.react(divRef.current, [
       {
@@ -64,6 +80,7 @@ export default function Flight3D({ trajectory, plotlyReady, playbackIndex }) {
         hovertemplate: `Playback · t:${time[pIdx]}s · Alt:${z_up[pIdx].toFixed(1)}m<extra></extra>`,
       },
     ], {
+      uirevision: "flight3d-camera",
       paper_bgcolor: "rgba(0,0,0,0)",
       plot_bgcolor: "rgba(0,0,0,0)",
       margin: { l: 0, r: 20, t: 0, b: 0 },
@@ -72,9 +89,10 @@ export default function Flight3D({ trajectory, plotlyReady, playbackIndex }) {
         bgcolor: "rgba(0,0,0,0)",
         xaxis: { ...axBase, title: { text: "East (m)", font: { color: "#cbd5e1", size: 10, family: MF } } },
         yaxis: { ...axBase, title: { text: "North (m)", font: { color: "#cbd5e1", size: 10, family: MF } } },
-        zaxis: { ...axBase, title: { text: "Alt (m)", font: { color: "#cbd5e1", size: 10, family: MF } }, backgroundcolor: "rgba(10,15,26,0.45)" },
-        camera: { eye: { x: 1.5, y: -1.5, z: 0.85 }, up: { x: 0, y: 0, z: 1 } },
-        aspectmode: "data",
+        zaxis: { ...axBase, title: { text: "Alt (m)", font: { color: "#cbd5e1", size: 10, family: MF } } },
+        camera: { eye: { x: 1.45, y: -1.55, z: 0.72 }, up: { x: 0, y: 0, z: 1 } },
+        aspectmode: "manual",
+        aspectratio: ar,
       },
       coloraxis: {
         colorscale: SPEED_CS, cmin: 0, cmax: maxSp,
@@ -88,17 +106,46 @@ export default function Flight3D({ trajectory, plotlyReady, playbackIndex }) {
     }, { displayModeBar: true, displaylogo: false, modeBarButtonsToRemove: ["toImage", "sendDataToCloud"], responsive: true });
 
     hasPlotted.current = true;
-  }, [trajectory, plotlyReady, playbackIndex]);
+  }, [trajectory, plotlyReady]);
 
   useEffect(() => {
-    if (!hasPlotted.current || !window.Plotly || !trajectory || playbackIndex == null) return;
-    const { x_east, y_north, z_up } = trajectory;
-    const i = playbackIndex;
-    window.Plotly.restyle(divRef.current, {
-      x: [[x_east[i]]],
-      y: [[y_north[i]]],
-      z: [[z_up[i]]],
-    }, [4]);
+    if (!trajectory) return;
+    const { time, x_east, y_north, z_up } = trajectory;
+    const last = z_up.length - 1;
+    const i = playbackIndex == null ? last : Math.max(0, Math.min(playbackIndex, last));
+    restyleTargetRef.current = { i, trajectory };
+
+    const runRestyle = () => {
+      restyleRafRef.current = null;
+      if (!hasPlotted.current || !window.Plotly || !divRef.current) return;
+      const { i: j, trajectory: tr } = restyleTargetRef.current;
+      if (!tr) return;
+      const t = tr.time;
+      const xe = tr.x_east;
+      const yn = tr.y_north;
+      const zu = tr.z_up;
+      window.Plotly.restyle(
+        divRef.current,
+        {
+          x: [[xe[j]]],
+          y: [[yn[j]]],
+          z: [[zu[j]]],
+          hovertemplate: [`Playback · t:${t[j]}s · Alt:${zu[j].toFixed(1)}m<extra></extra>`],
+        },
+        [4],
+      );
+    };
+
+    if (restyleRafRef.current == null) {
+      restyleRafRef.current = requestAnimationFrame(runRestyle);
+    }
+
+    return () => {
+      if (restyleRafRef.current != null) {
+        cancelAnimationFrame(restyleRafRef.current);
+        restyleRafRef.current = null;
+      }
+    };
   }, [playbackIndex, trajectory]);
 
   return (

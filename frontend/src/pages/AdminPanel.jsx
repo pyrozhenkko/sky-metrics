@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  ChevronDown,
   ChevronLeft,
   LogOut,
   Users,
@@ -11,7 +12,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  KeyRound,
   Activity,
   RefreshCw,
 } from "lucide-react";
@@ -44,11 +44,199 @@ function fmtDate(iso) {
   });
 }
 
+const ROLE_UK_LABEL = {
+  ROLE_USER: "Користувач",
+  ROLE_ADMIN: "Адмін",
+};
+
+function roleUkLabel(role) {
+  const k = String(role ?? "").trim();
+  return ROLE_UK_LABEL[k] ?? k;
+}
+
+function roleBadgeStyle(roleKey) {
+  const k = String(roleKey ?? "").trim();
+  const isAdmin = k === "ROLE_ADMIN";
+  return {
+    display: "inline-block",
+    padding: "2px 8px",
+    borderRadius: 6,
+    fontSize: 10,
+    fontFamily: MONO,
+    background: isAdmin ? "rgba(251, 191, 36, 0.12)" : "rgba(56, 189, 248, 0.12)",
+    color: isAdmin ? "#fcd34d" : "#7dd3fc",
+    border: `1px solid ${isAdmin ? "rgba(251, 191, 36, 0.28)" : "rgba(56, 189, 248, 0.25)"}`,
+  };
+}
+
 function roleSetToArray(roles) {
   if (!roles) return [];
-  if (Array.isArray(roles)) return roles;
-  if (typeof roles === "object") return Object.values(roles);
+  if (Array.isArray(roles)) {
+    return [...new Set(roles.map((r) => String(r).trim()).filter(Boolean))];
+  }
+  if (typeof roles === "string") {
+    return [...new Set(roles.split(",").map((s) => s.trim()).filter(Boolean))];
+  }
+  if (typeof roles === "object") {
+    return [...new Set(Object.values(roles).map((r) => String(r).trim()).filter(Boolean))];
+  }
   return [];
+}
+
+const FLIGHT_STATUS_FILTER_OPTIONS = [
+  { value: "", label: "Усі" },
+  { value: "COMPLETED", label: "Завершено" },
+  { value: "FAILED", label: "Помилка" },
+  { value: "PROCESSING", label: "В обробці" },
+];
+
+function flightStatusUk(code) {
+  if (code == null || code === "") return "—";
+  const row = FLIGHT_STATUS_FILTER_OPTIONS.find((o) => o.value === String(code));
+  return row ? row.label : String(code);
+}
+
+function FlightStatusFilter({ value, onChange, disabled }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  const selected =
+    FLIGHT_STATUS_FILTER_OPTIONS.find((o) => o.value === value) ??
+    FLIGHT_STATUS_FILTER_OPTIONS[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const triggerStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "6px 10px",
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,0.12)",
+    background: "rgba(255,255,255,0.06)",
+    color: "#e2e8f0",
+    fontFamily: MONO,
+    fontSize: 11,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.6 : 1,
+    minWidth: 148,
+    justifyContent: "space-between",
+  };
+
+  const listStyle = {
+    position: "absolute",
+    left: 0,
+    top: "calc(100% + 4px)",
+    margin: 0,
+    padding: 4,
+    listStyle: "none",
+    minWidth: "100%",
+    zIndex: 50,
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,0.12)",
+    background: "rgba(15, 23, 42, 0.98)",
+    boxShadow: "0 12px 32px rgba(0,0,0,0.45)",
+  };
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative", display: "inline-block" }}>
+      <button
+        type="button"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Фільтр за статусом польоту"
+        onClick={() => !disabled && setOpen((o) => !o)}
+        style={triggerStyle}
+      >
+        <span>{selected.label}</span>
+        <ChevronDown
+          size={14}
+          aria-hidden
+          style={{ opacity: 0.75, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s ease" }}
+        />
+      </button>
+      {open && (
+        <ul role="listbox" aria-label="Статус польоту" style={listStyle}>
+          {FLIGHT_STATUS_FILTER_OPTIONS.map((opt) => {
+            const isOn = opt.value === value;
+            return (
+              <li
+                key={opt.value === "" ? "__all__" : opt.value}
+                role="option"
+                aria-selected={isOn}
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onChange(opt.value);
+                    setOpen(false);
+                  }
+                }}
+                tabIndex={0}
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: 6,
+                  fontFamily: MONO,
+                  fontSize: 11,
+                  color: isOn ? "#f1f5f9" : "#cbd5e1",
+                  background: isOn ? "rgba(56, 189, 248, 0.15)" : "transparent",
+                  cursor: "pointer",
+                  outline: "none",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isOn) e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isOn) e.currentTarget.style.background = "transparent";
+                }}
+              >
+                {opt.label}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function primaryRoleKey(roles) {
+  const list = roleSetToArray(roles);
+  if (list.length === 0) return null;
+  if (list.some((r) => String(r).trim() === "ROLE_ADMIN")) return "ROLE_ADMIN";
+  if (list.some((r) => String(r).trim() === "ROLE_USER")) return "ROLE_USER";
+  return String(list[0]).trim();
+}
+
+function UserRolesCell({ roles }) {
+  const key = primaryRoleKey(roles);
+  if (!key) {
+    return <span style={{ color: "#64748b" }}>—</span>;
+  }
+  return (
+    <span style={roleBadgeStyle(key)} aria-label={`Роль: ${roleUkLabel(key)}`}>
+      {roleUkLabel(key)}
+    </span>
+  );
 }
 
 export default function AdminPanel({ activeTab, onLogout }) {
@@ -74,18 +262,11 @@ export default function AdminPanel({ activeTab, onLogout }) {
     username: "",
     email: "",
     password: "",
-    roleUser: true,
-    roleAdmin: false,
+    isAdmin: false,
   });
 
   const [editUser, setEditUser] = useState(null);
-  const [editForm, setEditForm] = useState({ username: "", email: "" });
-
-  const [rolesTarget, setRolesTarget] = useState(null);
-  const [rolesForm, setRolesForm] = useState({
-    roleUser: true,
-    roleAdmin: false,
-  });
+  const [editForm, setEditForm] = useState({ username: "", email: "", isAdmin: false });
 
   const [deleteTarget, setDeleteTarget] = useState(null);
 
@@ -163,13 +344,7 @@ export default function AdminPanel({ activeTab, onLogout }) {
 
   const handleCreate = async () => {
     clearFeedback();
-    const roles = [];
-    if (createForm.roleUser) roles.push("ROLE_USER");
-    if (createForm.roleAdmin) roles.push("ROLE_ADMIN");
-    if (roles.length === 0) {
-      setActionError("Оберіть хоча б одну роль (ROLE_USER та/або ROLE_ADMIN)");
-      return;
-    }
+    const roles = createForm.isAdmin ? ["ROLE_ADMIN"] : ["ROLE_USER"];
     if (!createForm.username.trim() || !createForm.email.trim()) {
       setActionError("Заповніть username та email");
       return;
@@ -192,8 +367,7 @@ export default function AdminPanel({ activeTab, onLogout }) {
         username: "",
         email: "",
         password: "",
-        roleUser: true,
-        roleAdmin: false,
+        isAdmin: false,
       });
       await refreshUsers();
     } catch (e) {
@@ -204,55 +378,29 @@ export default function AdminPanel({ activeTab, onLogout }) {
   };
 
   const openEdit = (u) => {
+    const rs = new Set(roleSetToArray(u.roles));
     setEditUser(u);
-    setEditForm({ username: u.username ?? "", email: u.email ?? "" });
+    setEditForm({
+      username: u.username ?? "",
+      email: u.email ?? "",
+      isAdmin: rs.has("ROLE_ADMIN"),
+    });
     clearFeedback();
   };
 
   const saveEdit = async () => {
     if (!editUser) return;
     clearFeedback();
+    const rolesPayload = editForm.isAdmin ? ["ROLE_ADMIN"] : ["ROLE_USER"];
     setMutationPending(true);
     try {
-      const res = await adminUpdateUser(editUser.id, {
+      const resProfile = await adminUpdateUser(editUser.id, {
         username: editForm.username.trim(),
         email: editForm.email.trim(),
       });
-      setActionSuccess(res?.message || "Профіль оновлено");
+      await adminUpdateRoles(editUser.id, rolesPayload);
+      setActionSuccess(resProfile?.message || "Профіль і роль оновлено");
       setEditUser(null);
-      await refreshUsers();
-    } catch (e) {
-      setActionError(e.message);
-    } finally {
-      setMutationPending(false);
-    }
-  };
-
-  const openRoles = (u) => {
-    const rs = new Set(roleSetToArray(u.roles).map((r) => String(r)));
-    setRolesTarget(u);
-    setRolesForm({
-      roleUser: rs.has("ROLE_USER"),
-      roleAdmin: rs.has("ROLE_ADMIN"),
-    });
-    clearFeedback();
-  };
-
-  const saveRoles = async () => {
-    if (!rolesTarget) return;
-    clearFeedback();
-    const roles = [];
-    if (rolesForm.roleUser) roles.push("ROLE_USER");
-    if (rolesForm.roleAdmin) roles.push("ROLE_ADMIN");
-    if (roles.length === 0) {
-      setActionError("Оберіть хоча б одну роль (ROLE_USER та/або ROLE_ADMIN)");
-      return;
-    }
-    setMutationPending(true);
-    try {
-      const res = await adminUpdateRoles(rolesTarget.id, roles);
-      setActionSuccess(res?.message || "Ролі оновлено");
-      setRolesTarget(null);
       await refreshUsers();
     } catch (e) {
       setActionError(e.message);
@@ -428,7 +576,7 @@ export default function AdminPanel({ activeTab, onLogout }) {
               aria-busy="true"
               aria-label="Завантаження статистики"
             >
-              {[0, 1, 2].map((i) => (
+              {[0, 1].map((i) => (
                 <div
                   key={i}
                   style={{
@@ -493,13 +641,6 @@ export default function AdminPanel({ activeTab, onLogout }) {
               {[
                 { label: "Користувачів", val: stats.totalUsers },
                 { label: "Польотів", val: stats.totalFlights },
-                {
-                  label: "Годин польоту (сум.)",
-                  val:
-                    stats.totalFlightHours != null
-                      ? Number(stats.totalFlightHours).toFixed(1)
-                      : "—",
-                },
               ].map((c) => (
                 <div
                   key={c.label}
@@ -578,6 +719,39 @@ export default function AdminPanel({ activeTab, onLogout }) {
           title={tab === "users" ? "Таблиця користувачів" : "Таблиця польотів"}
           icon={tab === "users" ? Users : Plane}
           color={tab === "users" ? "#818cf8" : "#38bdf8"}
+          headerEnd={
+            tab === "users" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setCreateOpen(true);
+                  clearFeedback();
+                }}
+                disabled={tableBusy}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: "none",
+                  cursor: tableBusy ? "not-allowed" : "pointer",
+                  opacity: tableBusy ? 0.6 : 1,
+                  fontFamily: MONO,
+                  fontSize: 11,
+                  color: "#fff",
+                  background: "linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%)",
+                }}
+              >
+                <Plus size={14} /> Новий користувач
+              </button>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 10, color: "#64748b" }}>Статус:</span>
+                <FlightStatusFilter value={statusFilter} onChange={setStatusFilter} disabled={tableBusy} />
+              </div>
+            )
+          }
         >
           <div style={{ position: "relative", minHeight: 120 }}>
             {tableBusy && (
@@ -648,29 +822,6 @@ export default function AdminPanel({ activeTab, onLogout }) {
             )}
             {!listLoading && !listError && tab === "users" ? (
           <div style={{ padding: "0 16px 16px" }}>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-              <button
-                type="button"
-                onClick={() => { setCreateOpen(true); clearFeedback(); }}
-                disabled={tableBusy}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "8px 14px",
-                  borderRadius: 10,
-                  border: "none",
-                  cursor: tableBusy ? "not-allowed" : "pointer",
-                  opacity: tableBusy ? 0.6 : 1,
-                  fontFamily: MONO,
-                  fontSize: 11,
-                  color: "#fff",
-                  background: "linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%)",
-                }}
-              >
-                <Plus size={14} /> Новий користувач
-              </button>
-            </div>
             <div
               style={{
                 overflowX: "auto",
@@ -685,11 +836,10 @@ export default function AdminPanel({ activeTab, onLogout }) {
                 <thead>
                   <tr style={{ background: "rgba(255,255,255,0.04)", textAlign: "left" }}>
                     {[
-                      { key: "id", label: "id" },
-                      { key: "username", label: "username" },
-                      { key: "email", label: "email" },
-                      { key: "roles", label: "roles" },
-                      { key: "totalFlights", label: "totalFlights" },
+                      { key: "username", label: "Логін" },
+                      { key: "email", label: "Пошта" },
+                      { key: "roles", label: "Ролі" },
+                      { key: "totalFlights", label: "Польоти" },
                       { key: "actions", label: "Дії" },
                     ].map((col) => (
                       <th
@@ -708,17 +858,15 @@ export default function AdminPanel({ activeTab, onLogout }) {
                       key={u.id}
                       style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
                     >
-                      <td style={{ padding: "10px 12px", color: "#cbd5e1" }}>{u.id}</td>
                       <td style={{ padding: "10px 12px" }}>{u.username}</td>
                       <td style={{ padding: "10px 12px", color: "#94a3b8" }}>{u.email}</td>
                       <td style={{ padding: "10px 12px", color: "#94a3b8" }}>
-                        {roleSetToArray(u.roles).join(", ")}
+                        <UserRolesCell roles={u.roles} />
                       </td>
                       <td style={{ padding: "10px 12px" }}>{u.totalFlights ?? "—"}</td>
                       <td style={{ padding: "10px 12px" }}>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                          <IconTextBtn disabled={tableBusy} icon={<Pencil size={12} />} label="Профіль" title="Редагувати профіль" onClick={() => openEdit(u)} />
-                          <IconTextBtn disabled={tableBusy} icon={<KeyRound size={12} />} label="Ролі" title="Змінити ролі (ROLE_USER / ROLE_ADMIN)" onClick={() => openRoles(u)} />
+                          <IconTextBtn disabled={tableBusy} icon={<Pencil size={12} />} label="Редагувати" title="Редагувати профіль і роль" onClick={() => openEdit(u)} />
                           <IconTextBtn disabled={tableBusy} icon={<Trash2 size={12} />} label="Видалити" title="Видалити користувача" danger onClick={() => { setDeleteTarget(u); clearFeedback(); }} />
                         </div>
                       </td>
@@ -730,30 +878,6 @@ export default function AdminPanel({ activeTab, onLogout }) {
           </div>
         ) : (
           <div style={{ padding: "0 16px 16px" }}>
-            <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 10, color: "#64748b" }}>Статус:</span>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                disabled={tableBusy}
-                aria-label="Фільтр за статусом польоту"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: 8,
-                  color: "#e2e8f0",
-                  padding: "6px 10px",
-                  fontFamily: MONO,
-                  fontSize: 11,
-                  opacity: tableBusy ? 0.6 : 1,
-                }}
-              >
-                <option value="">Усі</option>
-                <option value="COMPLETED">COMPLETED</option>
-                <option value="FAILED">FAILED</option>
-                <option value="PROCESSING">PROCESSING</option>
-              </select>
-            </div>
             <div
               style={{
                 overflowX: "auto",
@@ -768,13 +892,11 @@ export default function AdminPanel({ activeTab, onLogout }) {
                 <thead>
                   <tr style={{ background: "rgba(255,255,255,0.04)", textAlign: "left" }}>
                     {[
-                      { key: "id", label: "id" },
-                      { key: "userId", label: "userId" },
-                      { key: "username", label: "username" },
-                      { key: "ownerEmail", label: "ownerEmail" },
-                      { key: "filename", label: "filename" },
-                      { key: "uploadedAt", label: "uploadedAt" },
-                      { key: "status", label: "status" },
+                      { key: "username", label: "Користувач" },
+                      { key: "ownerEmail", label: "Пошта власника" },
+                      { key: "filename", label: "Файл" },
+                      { key: "uploadedAt", label: "Завантажено" },
+                      { key: "status", label: "Статус" },
                     ].map((col) => (
                       <th
                         key={col.key}
@@ -810,15 +932,6 @@ export default function AdminPanel({ activeTab, onLogout }) {
                           outline: "none",
                         }}
                       >
-                        <td
-                          title={String(f.id)}
-                          style={{ padding: "10px 12px", color: "#cbd5e1", maxWidth: 120 }}
-                        >
-                          <span style={{ display: "inline-block", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "bottom" }}>
-                            {String(f.id)}
-                          </span>
-                        </td>
-                        <td style={{ padding: "10px 12px", color: "#94a3b8" }}>{f.userId ?? "—"}</td>
                         <td style={{ padding: "10px 12px", color: "#cbd5e1" }}>{f.username ?? "—"}</td>
                         <td
                           title={f.ownerEmail ?? ""}
@@ -832,7 +945,9 @@ export default function AdminPanel({ activeTab, onLogout }) {
                         <td style={{ padding: "10px 12px", color: "#94a3b8" }}>
                           {fmtDate(f.uploadedAt)}
                         </td>
-                        <td style={{ padding: "10px 12px", color: "#94a3b8" }}>{f.status}</td>
+                        <td style={{ padding: "10px 12px", color: "#94a3b8" }} title={f.status ?? ""}>
+                          {flightStatusUk(f.status)}
+                        </td>
                       </tr>
                     );
                   })}
@@ -871,25 +986,33 @@ export default function AdminPanel({ activeTab, onLogout }) {
             onChange={(v) => setCreateForm((p) => ({ ...p, password: v }))}
             autoComplete="new-password"
           />
-          <div style={{ fontSize: 9, color: "#64748b", marginBottom: 6, letterSpacing: "0.06em" }}>
-            roles
+          <div style={{ fontSize: 9, color: "#64748b", marginBottom: 8, letterSpacing: "0.06em" }}>
+            Роль
           </div>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, fontSize: 11 }}>
-            <input
-              type="checkbox"
-              checked={createForm.roleUser}
-              onChange={(e) => setCreateForm((p) => ({ ...p, roleUser: e.target.checked }))}
-            />
-            ROLE_USER
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 11 }}>
-            <input
-              type="checkbox"
-              checked={createForm.roleAdmin}
-              onChange={(e) => setCreateForm((p) => ({ ...p, roleAdmin: e.target.checked }))}
-            />
-            ROLE_ADMIN
-          </label>
+          <div
+            role="radiogroup"
+            aria-label="Роль нового користувача"
+            style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16, fontSize: 11 }}
+          >
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input
+                type="radio"
+                name="create-user-role"
+                checked={!createForm.isAdmin}
+                onChange={() => setCreateForm((p) => ({ ...p, isAdmin: false }))}
+              />
+              Користувач
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input
+                type="radio"
+                name="create-user-role"
+                checked={createForm.isAdmin}
+                onChange={() => setCreateForm((p) => ({ ...p, isAdmin: true }))}
+              />
+              Адмін
+            </label>
+          </div>
           <ModalActions
             onCancel={() => setCreateOpen(false)}
             onConfirm={handleCreate}
@@ -900,42 +1023,39 @@ export default function AdminPanel({ activeTab, onLogout }) {
       )}
 
       {editUser && (
-        <Modal title={`Редагування профілю · ${editUser.username}`} onClose={() => setEditUser(null)}>
+        <Modal title={`Редагування · ${editUser.username}`} onClose={() => setEditUser(null)}>
           <Field label="username" value={editForm.username} onChange={(v) => setEditForm((p) => ({ ...p, username: v }))} />
           <Field label="email" type="email" value={editForm.email} onChange={(v) => setEditForm((p) => ({ ...p, email: v }))} />
+          <div style={{ fontSize: 9, color: "#64748b", margin: "14px 0 8px", letterSpacing: "0.06em" }}>
+            Роль
+          </div>
+          <div
+            role="radiogroup"
+            aria-label="Роль користувача"
+            style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 8, fontSize: 11 }}
+          >
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input
+                type="radio"
+                name="edit-user-role"
+                checked={!editForm.isAdmin}
+                onChange={() => setEditForm((p) => ({ ...p, isAdmin: false }))}
+              />
+              Користувач
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input
+                type="radio"
+                name="edit-user-role"
+                checked={editForm.isAdmin}
+                onChange={() => setEditForm((p) => ({ ...p, isAdmin: true }))}
+              />
+              Адмін
+            </label>
+          </div>
           <ModalActions
             onCancel={() => setEditUser(null)}
             onConfirm={saveEdit}
-            confirmLabel="Зберегти"
-            confirmPending={mutationPending}
-          />
-        </Modal>
-      )}
-
-      {rolesTarget && (
-        <Modal title={`Зміна ролей · ${rolesTarget.username}`} onClose={() => setRolesTarget(null)}>
-          <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 12px" }}>
-            Поле <code style={{ color: "#94a3b8" }}>roles</code> у тілі PUT (ROLE_USER / ROLE_ADMIN).
-          </p>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, fontSize: 11 }}>
-            <input
-              type="checkbox"
-              checked={rolesForm.roleUser}
-              onChange={(e) => setRolesForm((p) => ({ ...p, roleUser: e.target.checked }))}
-            />
-            ROLE_USER
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 11 }}>
-            <input
-              type="checkbox"
-              checked={rolesForm.roleAdmin}
-              onChange={(e) => setRolesForm((p) => ({ ...p, roleAdmin: e.target.checked }))}
-            />
-            ROLE_ADMIN
-          </label>
-          <ModalActions
-            onCancel={() => setRolesTarget(null)}
-            onConfirm={saveRoles}
             confirmLabel="Зберегти"
             confirmPending={mutationPending}
           />

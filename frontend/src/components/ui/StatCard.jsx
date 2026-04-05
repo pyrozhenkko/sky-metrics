@@ -19,6 +19,7 @@ export default function StatCard({ icon: Icon, label, value, unit, color, delay 
         background: hov ? `${color}09` : "rgba(255,255,255,0.025)",
         border: `1px solid ${hov ? color + "42" : "rgba(255,255,255,0.06)"}`,
         borderRadius: 12, padding: "15px 17px", position: "relative", overflow: "hidden",
+        minWidth: 0,
         transition: "all 0.28s ease",
         opacity: vis ? 1 : 0,
         transform: vis ? "translateY(0)" : "translateY(10px)",
@@ -32,9 +33,26 @@ export default function StatCard({ icon: Icon, label, value, unit, color, delay 
         </div>
         <span style={{ fontFamily: MONO, fontSize: 9, color: "#cbd5e1", letterSpacing: "0.07em", textTransform: "uppercase" }}>{label}</span>
       </div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
-        <span style={{ fontFamily: MONO, fontSize: 25, fontWeight: 600, color: "#f1f5f9", letterSpacing: "-0.03em" }}>{value}</span>
-        {unit && <span style={{ fontFamily: MONO, fontSize: 11, color, opacity: 0.85 }}>{unit}</span>}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 5, minWidth: 0, overflow: "hidden" }}>
+        <span
+          style={{
+            fontFamily: MONO,
+            fontSize: 25,
+            fontWeight: 600,
+            color: "#f1f5f9",
+            letterSpacing: "-0.03em",
+            minWidth: 0,
+            flex: "1 1 auto",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {value}
+        </span>
+        {unit && (
+          <span style={{ fontFamily: MONO, fontSize: 11, color, opacity: 0.85, flexShrink: 0 }}>{unit}</span>
+        )}
       </div>
     </div>
   );
