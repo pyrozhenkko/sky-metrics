@@ -11,6 +11,9 @@ from flightlog.config import CLEAN_EXPORT_MSG_TYPES
 from flightlog.dataflash import collect_export_sources
 
 _EARTH_R_M = 6_371_000.0
+_WGS84_A = 6_378_137.0
+_WGS84_F = 1.0 / 298.257223563
+_WGS84_E2 = 2.0 * _WGS84_F - _WGS84_F * _WGS84_F
 _G_NED = np.array([0.0, 0.0, 9.81])
 
 
@@ -31,6 +34,41 @@ def _haversine_m(
     return 2 * _EARTH_R_M * math.asin(min(1.0, math.sqrt(s)))
 
 
+def _geodetic_to_ecef(
+    lat_deg: np.ndarray,
+    lon_deg: np.ndarray,
+    h_m: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    lat = np.radians(lat_deg.astype(np.float64))
+    lon = np.radians(lon_deg.astype(np.float64))
+    h = h_m.astype(np.float64)
+    sin_lat = np.sin(lat)
+    cos_lat = np.cos(lat)
+    sin_lon = np.sin(lon)
+    cos_lon = np.cos(lon)
+    n = _WGS84_A / np.sqrt(1.0 - _WGS84_E2 * sin_lat * sin_lat)
+    x = (n + h) * cos_lat * cos_lon
+    y = (n + h) * cos_lat * sin_lon
+    z = (n * (1.0 - _WGS84_E2) + h) * sin_lat
+    return x, y, z
+
+
+def _geodetic_to_ecef_scalar(
+    lat_deg: float, lon_deg: float, h_m: float
+) -> tuple[float, float, float]:
+    lat = math.radians(lat_deg)
+    lon = math.radians(lon_deg)
+    sin_lat = math.sin(lat)
+    cos_lat = math.cos(lat)
+    sin_lon = math.sin(lon)
+    cos_lon = math.cos(lon)
+    n = _WGS84_A / math.sqrt(1.0 - _WGS84_E2 * sin_lat * sin_lat)
+    x = (n + h_m) * cos_lat * cos_lon
+    y = (n + h_m) * cos_lat * sin_lon
+    z = (n * (1.0 - _WGS84_E2) + h_m) * sin_lat
+    return x, y, z
+
+
 def _enu_from_wgs84(
     lat0_deg: float,
     lon0_deg: float,
@@ -40,11 +78,20 @@ def _enu_from_wgs84(
     alt_m: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     lat0 = math.radians(lat0_deg)
-    c = math.cos(lat0)
-    x_east = _EARTH_R_M * c * np.radians(lon_deg - lon0_deg)
-    y_north = _EARTH_R_M * np.radians(lat_deg - lat0_deg)
-    z_up = alt_m - alt0_m
-    return x_east, y_north, z_up
+    lon0 = math.radians(lon0_deg)
+    sin_lat0 = math.sin(lat0)
+    cos_lat0 = math.cos(lat0)
+    sin_lon0 = math.sin(lon0)
+    cos_lon0 = math.cos(lon0)
+    x0, y0, z0 = _geodetic_to_ecef_scalar(lat0_deg, lon0_deg, alt0_m)
+    x, y, z = _geodetic_to_ecef(lat_deg, lon_deg, alt_m)
+    dx = x - x0
+    dy = y - y0
+    dz = z - z0
+    east = -sin_lon0 * dx + cos_lon0 * dy
+    north = -sin_lat0 * cos_lon0 * dx - sin_lat0 * sin_lon0 * dy + cos_lat0 * dz
+    up = cos_lat0 * cos_lon0 * dx + cos_lat0 * sin_lon0 * dy + sin_lat0 * dz
+    return east, north, up
 
 
 def _rot_body_to_ned(r_deg: float, p_deg: float, y_deg: float) -> np.ndarray:
@@ -370,7 +417,7 @@ def build_mission_json(bin_path: Path) -> dict[str, Any]:
             "trajectory": trajectory,
             "methodology": {
                 "horizontal_distance": "haversine over GPS Lat/Lng",
-                "enu": "локальна дотична площина від першої точки GPS",
+                "enu": "WGS-84 → ECEF, зміщення → ENU від першої точки GPS",
                 "imu_speed": "трапеції по лінійному прискоренню в NED після merge ATT+IMU",
             },
         },
