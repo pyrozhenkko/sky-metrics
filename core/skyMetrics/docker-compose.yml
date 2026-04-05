@@ -33,5 +33,14 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  backend-python:
+    build:
+      context: ../../python
+      dockerfile: Dockerfile
+    container_name: skymetrics_backend_python
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
 volumes:
   postgres_data:
