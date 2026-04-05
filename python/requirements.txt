@@ -4,3 +4,5 @@ numpy>=1.26.0
 pandas>=2.0.0
 pymavlink>=2.4.0
 python-multipart>=0.0.9
+google-generativeai>=0.8.6
+python-dotenv

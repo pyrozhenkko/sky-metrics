@@ -4,10 +4,12 @@ from pathlib import Path
 
 import tempfile
 import shutil
+import json
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 
 from flightlog.analysis import build_mission_json
+from flightlog.llm import prepare_llm_payload, generate_ai_report
 
 MAX_BIN_BYTES = 256 * 1024 * 1024
 
@@ -42,6 +44,17 @@ async def analyze(file: UploadFile = File(...)) -> JSONResponse:
         tmp_path.unlink()
         
     return JSONResponse(content=payload)
+
+@app.post("/call_llm")
+async def call_llm(file: UploadFile = File(...)) -> JSONResponse:
+    content = await file.read()
+    flight_json = json.loads(content)
+
+    llm_data = prepare_llm_payload(flight_json)
+
+    result = generate_ai_report(llm_data)
+
+    return JSONResponse(content=result)
 
 
 def run() -> None:
