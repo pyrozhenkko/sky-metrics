@@ -2,9 +2,7 @@ package org.ccpc.skymetrics.service;
 
 import org.ccpc.skymetrics.dto.AiReportResponse;
 import org.ccpc.skymetrics.dto.FlightDtos.PythonAnalysisResponse;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -14,15 +12,25 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.web.reactive.function.client.WebClient;
 
 @Service
-@RequiredArgsConstructor
 public class PythonIntegrationService {
 
     private final RestTemplate restTemplate;
+    private final WebClient webClient;
 
-    @Value("${python.service.url:http://localhost:5000/api/analyze}")
+    @Value("${python.service.url:http://localhost:8000/api/analyze}")
     private String pythonUrl;
+
+    @Value("${python.service.llm.url:http://localhost:8000/api/call_llm}")
+    private String pythonLlmUrl;
+
+    public PythonIntegrationService(RestTemplate restTemplate, WebClient.Builder webClientBuilder) {
+        this.restTemplate = restTemplate;
+        this.webClient = webClientBuilder.build();
+    }
 
     public PythonAnalysisResponse analyzeLogFile(MultipartFile file) {
         try {
@@ -47,19 +55,16 @@ public class PythonIntegrationService {
     }
 
     public AiReportResponse getAiReportFromJson(JsonNode flightDataJson) {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-
-        byte[] jsonBytes = flightDataJson.toString().getBytes(StandardCharsets.UTF_8);
-
-        builder.part("file", jsonBytes, MediaType.APPLICATION_JSON)
-                .filename("payload.json");
-
-        return webClient.post()
-                .uri("/call_llm")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(BodyInserters.fromMultipartData(builder.build()))
-                .retrieve()
-                .bodyToMono(AiReportResponse.class)
-                .block();
+        try {
+            return webClient.post()
+                    .uri(pythonLlmUrl)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(flightDataJson)
+                    .retrieve()
+                    .bodyToMono(AiReportResponse.class)
+                    .block();
+        } catch (Exception e) {
+            throw new RuntimeException("Error Python LLM: " + e.getMessage(), e);
+        }
     }
 }

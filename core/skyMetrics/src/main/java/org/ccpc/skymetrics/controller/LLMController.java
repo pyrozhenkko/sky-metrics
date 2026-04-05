@@ -20,14 +20,19 @@ public class LLMController {
     }
 
     @PostMapping("/ai-report")
-    public ResponseEntity<AiReportResponse> generateAiReport(@RequestBody JsonNode flightAnalyticsPayload) {
+    public ResponseEntity<Object> generateAiReport(@RequestBody JsonNode flightAnalyticsPayload) {
         try {
             AiReportResponse report = pythonIntegrationService.getAiReportFromJson(flightAnalyticsPayload);
-
             return ResponseEntity.ok(report);
-
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            e.printStackTrace();
+
+            return ResponseEntity.status(500).body(
+                    java.util.Map.of(
+                            "error", e.getMessage(),
+                            "cause", e.getCause() != null ? e.getCause().toString() : "Немає деталей"
+                    )
+            );
         }
     }
 }

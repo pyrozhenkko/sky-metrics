@@ -5,6 +5,7 @@ from pathlib import Path
 import tempfile
 import shutil
 import json
+from typing import Dict, Any
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 
@@ -46,15 +47,12 @@ async def analyze(file: UploadFile = File(...)) -> JSONResponse:
     return JSONResponse(content=payload)
 
 @app.post("/call_llm")
-async def call_llm(file: UploadFile = File(...)) -> JSONResponse:
-    content = await file.read()
-    flight_json = json.loads(content)
-
+async def call_llm(flight_json: Dict[str, Any]) -> JSONResponse:
     llm_data = prepare_llm_payload(flight_json)
 
     result = generate_ai_report(llm_data)
-
-    return JSONResponse(content=result)
+    parsed_result = json.loads(result)
+    return JSONResponse(content=parsed_result)
 
 
 def run() -> None:
