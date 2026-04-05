@@ -22,27 +22,24 @@ public class DatabaseSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // Init roles
         Role userRole = roleRepository.findByName(ERole.ROLE_USER)
                 .orElseGet(() -> roleRepository.save(new Role(null, ERole.ROLE_USER)));
         
         Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
                 .orElseGet(() -> roleRepository.save(new Role(null, ERole.ROLE_ADMIN)));
 
-        String commonPassword = passwordEncoder.encode("qwertyuiop");
+        String commonPassword = passwordEncoder.encode("admin123");
 
-        // Create Admin
-        if (!userRepository.existsByEmail("admin@gmail.com")) {
+        if (!userRepository.existsByEmail("admin@skymetrics.com")) {
             User admin = User.builder()
                     .username("admin")
-                    .email("admin@gmail.com")
+                    .email("admin@skymetrics.com")
                     .password(commonPassword)
                     .roles(Set.of(adminRole, userRole))
                     .build();
             userRepository.save(admin);
         }
 
-        // Create 5 Users
         for (int i = 1; i <= 5; i++) {
             String email = "user" + i + "@gmail.com";
             if (!userRepository.existsByEmail(email)) {
