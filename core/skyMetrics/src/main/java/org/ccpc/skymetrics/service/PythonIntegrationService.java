@@ -1,5 +1,6 @@
 package org.ccpc.skymetrics.service;
 
+import org.ccpc.skymetrics.dto.AiReportResponse;
 import org.ccpc.skymetrics.dto.FlightDtos.PythonAnalysisResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,5 +44,22 @@ public class PythonIntegrationService {
         } catch (Exception e) {
             return new PythonAnalysisResponse("error", null, null, null, e.getMessage());
         }
+    }
+
+    public AiReportResponse getAiReportFromJson(JsonNode flightDataJson) {
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+
+        byte[] jsonBytes = flightDataJson.toString().getBytes(StandardCharsets.UTF_8);
+
+        builder.part("file", jsonBytes, MediaType.APPLICATION_JSON)
+                .filename("payload.json");
+
+        return webClient.post()
+                .uri("/call_llm")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .retrieve()
+                .bodyToMono(AiReportResponse.class)
+                .block();
     }
 }
