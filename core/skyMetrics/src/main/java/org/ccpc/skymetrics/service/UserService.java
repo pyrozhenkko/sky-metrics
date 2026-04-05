@@ -11,6 +11,7 @@ import org.ccpc.skymetrics.repository.RoleRepository;
 import org.ccpc.skymetrics.repository.UserRepository;
 import org.ccpc.skymetrics.repository.FlightSessionRepository;
 import org.ccpc.skymetrics.dto.AuthDtos.SignupRequest;
+import org.ccpc.skymetrics.mapper.UserMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,17 +31,12 @@ public class UserService {
     private final FlightSessionRepository flightSessionRepository;
     private final FileStorageService fileStorageService;
     private final PasswordEncoder encoder;
+    private final UserMapper userMapper;
 
     @Transactional(readOnly = true)
     public List<UserAdminSummaryResponse> getAllUsersForAdmin() {
         return userRepository.findAll().stream()
-                .map(user -> new UserAdminSummaryResponse(
-                        user.getId(),
-                        user.getUsername(),
-                        user.getEmail(),
-                        user.getRoles().stream().map(r -> r.getName().name()).collect(Collectors.toSet()),
-                        (int) flightSessionRepository.countByUserId(user.getId())
-                ))
+                .map(user -> userMapper.toAdminSummaryResponse(user, (int) flightSessionRepository.countByUserId(user.getId())))
                 .collect(Collectors.toList());
     }
 

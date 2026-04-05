@@ -11,6 +11,7 @@ import org.ccpc.skymetrics.entity.User;
 import org.ccpc.skymetrics.repository.UserRepository;
 import org.ccpc.skymetrics.security.UserDetailsImpl;
 import org.ccpc.skymetrics.service.UserService;
+import org.ccpc.skymetrics.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,6 +30,7 @@ public class UserController {
 
     private final UserService userService;
     private final UserRepository userRepository;
+    private final UserMapper userMapper;
 
 
     @GetMapping("/me")
@@ -36,16 +38,7 @@ public class UserController {
         User user = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Set<String> roles = user.getRoles().stream()
-                .map(role -> role.getName().name())
-                .collect(Collectors.toSet());
-
-        return ResponseEntity.ok(new UserProfileResponse(
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                roles
-        ));
+        return ResponseEntity.ok(userMapper.toProfileResponse(user));
     }
 
 

@@ -2,6 +2,7 @@ package org.ccpc.skymetrics.service;
 
 import org.ccpc.skymetrics.dto.FlightDtos.*;
 import org.ccpc.skymetrics.entity.*;
+import org.ccpc.skymetrics.mapper.FlightMapper;
 import org.ccpc.skymetrics.repository.FlightSessionRepository;
 import org.ccpc.skymetrics.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class FlightSessionService {
     private final FlightSessionRepository sessionRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
+    private final FlightMapper flightMapper;
 
     @Transactional
     public FlightSession createInitialSession(String filename, Long userId) {
@@ -49,25 +51,19 @@ public class FlightSessionService {
 
         PythonData data = pythonResponse.data();
 
-        FlightMetrics metrics = FlightMetrics.builder()
-                .flightDurationSec(data.metrics().flightDurationSec())
-                .totalDistanceM(data.metrics().totalDistanceM())
-                .maxAltitudeM(data.metrics().maxAltitudeM())
-                .maxHorizontalSpeedMs(data.metrics().maxHorizontalSpeedMs())
-                .maxVerticalSpeedMs(data.metrics().maxVerticalSpeedMs())
-                .maxAccelerationMs2(data.metrics().maxAccelerationMs2())
-                .build();
-
-        TrajectoryData trajectoryData = new TrajectoryData(
-                data.trajectory().time(),
-                data.trajectory().x_east(),
-                data.trajectory().y_north(),
-                data.trajectory().z_up()
-        );
+        FlightMetrics metrics = flightMapper.toEntity(data.metrics());
+        TrajectoryData trajectoryData = flightMapper.toEntity(data.trajectory());
 
         session.setMetrics(metrics);
         session.setTrajectory(trajectoryData);
-        session.setAiSummary(data.aiSummary());
+        session.setMetaJson(pythonResponse.meta());
+        session.setMethodologyJson(data.methodology());
+
+        String anomaliesStr = "";
+        if (pythonResponse.missionAnalysis() != null && pythonResponse.missionAnalysis().anomalies() != null) {
+            anomaliesStr = String.join("\n", pythonResponse.missionAnalysis().anomalies());
+        }
+        session.setAiSummary(anomaliesStr);
         session.setStatus(FlightStatus.COMPLETED);
 
         FlightSession savedSession = sessionRepository.save(session);
@@ -79,7 +75,7 @@ public class FlightSessionService {
     public List<FlightSummaryResponse> getUserFlights(Long userId) {
         return sessionRepository.findAllByUserIdOrderByUploadedAtDesc(userId)
                 .stream()
-                .map(s -> new FlightSummaryResponse(s.getId(), s.getOriginalFilename(), s.getUploadedAt(), s.getStatus().name()))
+                .map(flightMapper::toSummaryResponse)
                 .collect(Collectors.toList());
     }
 
@@ -114,7 +110,7 @@ public class FlightSessionService {
         }
 
         return sessions.stream()
-                .map(s -> new FlightSummaryResponse(s.getId(), s.getOriginalFilename(), s.getUploadedAt(), s.getStatus().name()))
+                .map(flightMapper::toSummaryResponse)
                 .collect(Collectors.toList());
     }
 
@@ -146,36 +142,6 @@ public class FlightSessionService {
     }
 
     private FlightDetailResponse buildDetailResponse(FlightSession session) {
-        MetricsDto metricsDto = null;
-        if (session.getMetrics() != null) {
-            metricsDto = new MetricsDto(
-                    session.getMetrics().getFlightDurationSec(),
-                    session.getMetrics().getTotalDistanceM(),
-                    session.getMetrics().getMaxAltitudeM(),
-                    session.getMetrics().getMaxHorizontalSpeedMs(),
-                    session.getMetrics().getMaxVerticalSpeedMs(),
-                    session.getMetrics().getMaxAccelerationMs2()
-            );
-        }
-
-        TrajectoryDto trajectoryDto = null;
-        if (session.getTrajectory() != null) {
-            trajectoryDto = new TrajectoryDto(
-                    session.getTrajectory().getTime(),
-                    session.getTrajectory().getX_east(),
-                    session.getTrajectory().getY_north(),
-                    session.getTrajectory().getZ_up()
-            );
-        }
-
-        return new FlightDetailResponse(
-                session.getId(),
-                session.getOriginalFilename(),
-                session.getUploadedAt(),
-                session.getStatus().name(),
-                session.getAiSummary(),
-                metricsDto,
-                trajectoryDto
-        );
+        return flightMapper.toDetailResponse(session);
     }
 }

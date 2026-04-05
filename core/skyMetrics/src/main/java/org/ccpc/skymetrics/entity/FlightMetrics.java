@@ -37,6 +37,12 @@ public class FlightMetrics {
     @Column(name = "max_acceleration_m_s2")
     private Double maxAccelerationMs2;
 
+    @Column(name = "altitude_gain_m")
+    private Double altitudeGainM;
+
+    @Column(name = "max_speed_from_imu_trapz_m_s")
+    private Double maxSpeedFromImuTrapzMs;
+
     @OneToOne(mappedBy = "metrics")
     private FlightSession flightSession;
 }

@@ -41,7 +41,7 @@ public class PythonIntegrationService {
 
             return response.getBody();
         } catch (Exception e) {
-            return new PythonAnalysisResponse("error", null, e.getMessage());
+            return new PythonAnalysisResponse("error", null, null, null, e.getMessage());
         }
     }
 }
