@@ -21,6 +21,56 @@ export default function Flight3D({ trajectory, plotlyReady, playbackIndex }) {
   const hasPlotted = useRef(false);
   const restyleRafRef = useRef(null);
   const restyleTargetRef = useRef({ i: 0, trajectory: null });
+  const isInteractingRef = useRef(false);
+
+  const scheduleRestyle = () => {
+    if (restyleRafRef.current != null) return;
+    restyleRafRef.current = requestAnimationFrame(() => {
+      restyleRafRef.current = null;
+      if (
+        !hasPlotted.current ||
+        !window.Plotly ||
+        !divRef.current ||
+        isInteractingRef.current
+      ) {
+        return;
+      }
+      const { i: j, trajectory: tr } = restyleTargetRef.current;
+      if (!tr) return;
+      const t = tr.time;
+      const xe = tr.x_east;
+      const yn = tr.y_north;
+      const zu = tr.z_up;
+      const speeds = computeSpeeds(tr);
+      const tip = t.slice(0, j + 1).map(
+        (tv, idx) =>
+          `<b>t:</b> ${tv}s<br><b>E:</b> ${xe[idx].toFixed(1)}m &nbsp;<b>N:</b> ${yn[idx].toFixed(1)}m<br><b>Alt:</b> ${zu[idx].toFixed(1)}m<br><b>Speed:</b> ${speeds[idx].toFixed(2)} m/s`
+      );
+
+      window.Plotly.restyle(
+        divRef.current,
+        {
+          x: [xe.slice(0, j + 1)],
+          y: [yn.slice(0, j + 1)],
+          z: [zu.slice(0, j + 1)],
+          text: [tip],
+          "line.color": [speeds.slice(0, j + 1)],
+        },
+        [0],
+      );
+
+      window.Plotly.restyle(
+        divRef.current,
+        {
+          x: [[xe[j]]],
+          y: [[yn[j]]],
+          z: [[zu[j]]],
+          hovertemplate: [`Playback · t:${t[j]}s · Alt:${zu[j].toFixed(1)}m<extra></extra>`],
+        },
+        [4],
+      );
+    });
+  };
 
   useEffect(() => {
     if (!trajectory || !plotlyReady || !window.Plotly) return;
@@ -41,21 +91,21 @@ export default function Flight3D({ trajectory, plotlyReady, playbackIndex }) {
       backgroundcolor: "rgba(10,15,26,0.42)",
     };
 
-    const pIdx = x_east.length - 1;
+    const playIdx0 = 0;
     const ar = sceneAspectRatio(x_east, y_north, z_up);
 
     window.Plotly.react(divRef.current, [
       {
         type: "scatter3d", mode: "lines",
-        x: x_east, y: y_north, z: z_up,
-        text: tipText, hovertemplate: "%{text}<extra></extra>",
-        line: { color: speeds, colorscale: SPEED_CS, width: 5, cmin: 0, cmax: maxSp },
+        x: [x_east[0]], y: [y_north[0]], z: [z_up[0]],
+        text: [tipText[0]], hovertemplate: "%{text}<extra></extra>",
+        line: { color: [speeds[0]], colorscale: SPEED_CS, width: 6, cmin: 0, cmax: maxSp },
       },
       {
         type: "scatter3d", mode: "markers",
         x: x_east, y: y_north, z: z_up,
         text: tipText, hovertemplate: "%{text}<extra></extra>",
-        marker: { size: 2.5, color: speeds, colorscale: SPEED_CS, cmin: 0, cmax: maxSp, opacity: 0.55 },
+        marker: { size: 2.5, color: speeds, colorscale: SPEED_CS, cmin: 0, cmax: maxSp, opacity: 0.14 },
       },
       {
         type: "scatter3d", mode: "markers+text",
@@ -75,9 +125,9 @@ export default function Flight3D({ trajectory, plotlyReady, playbackIndex }) {
       },
       {
         type: "scatter3d", mode: "markers",
-        x: [x_east[pIdx]], y: [y_north[pIdx]], z: [z_up[pIdx]],
+        x: [x_east[playIdx0]], y: [y_north[playIdx0]], z: [z_up[playIdx0]],
         marker: { size: 10, color: "#facc15", symbol: "circle", opacity: 1, line: { color: "#fff", width: 1.5 } },
-        hovertemplate: `Playback · t:${time[pIdx]}s · Alt:${z_up[pIdx].toFixed(1)}m<extra></extra>`,
+        hovertemplate: `Playback · t:${time[playIdx0]}s · Alt:${z_up[playIdx0].toFixed(1)}m<extra></extra>`,
       },
     ], {
       uirevision: "flight3d-camera",
@@ -87,6 +137,7 @@ export default function Flight3D({ trajectory, plotlyReady, playbackIndex }) {
       showlegend: false,
       scene: {
         bgcolor: "rgba(0,0,0,0)",
+        dragmode: "orbit",
         xaxis: { ...axBase, title: { text: "East (m)", font: { color: "#cbd5e1", size: 10, family: MF } } },
         yaxis: { ...axBase, title: { text: "North (m)", font: { color: "#cbd5e1", size: 10, family: MF } } },
         zaxis: { ...axBase, title: { text: "Alt (m)", font: { color: "#cbd5e1", size: 10, family: MF } } },
@@ -103,42 +154,43 @@ export default function Flight3D({ trajectory, plotlyReady, playbackIndex }) {
           bgcolor: "rgba(0,0,0,0)", bordercolor: "rgba(255,255,255,0.06)", x: 1.0,
         },
       },
-    }, { displayModeBar: true, displaylogo: false, modeBarButtonsToRemove: ["toImage", "sendDataToCloud"], responsive: true });
+    }, {
+      displayModeBar: true,
+      displaylogo: false,
+      modeBarButtonsToRemove: ["toImage", "sendDataToCloud"],
+      responsive: true,
+      staticPlot: false,
+      scrollZoom: true,
+    });
 
     hasPlotted.current = true;
+    restyleTargetRef.current = { i: 0, trajectory };
+
+    const handlePointerDown = () => {
+      isInteractingRef.current = true;
+    };
+
+    const handlePointerUp = () => {
+      isInteractingRef.current = false;
+      scheduleRestyle();
+    };
+
+    divRef.current.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("pointerup", handlePointerUp);
+    scheduleRestyle();
+
+    return () => {
+      divRef.current?.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
   }, [trajectory, plotlyReady]);
 
   useEffect(() => {
     if (!trajectory) return;
-    const { time, x_east, y_north, z_up } = trajectory;
     const last = z_up.length - 1;
-    const i = playbackIndex == null ? last : Math.max(0, Math.min(playbackIndex, last));
+    const i = Math.max(0, Math.min(playbackIndex ?? 0, last));
     restyleTargetRef.current = { i, trajectory };
-
-    const runRestyle = () => {
-      restyleRafRef.current = null;
-      if (!hasPlotted.current || !window.Plotly || !divRef.current) return;
-      const { i: j, trajectory: tr } = restyleTargetRef.current;
-      if (!tr) return;
-      const t = tr.time;
-      const xe = tr.x_east;
-      const yn = tr.y_north;
-      const zu = tr.z_up;
-      window.Plotly.restyle(
-        divRef.current,
-        {
-          x: [[xe[j]]],
-          y: [[yn[j]]],
-          z: [[zu[j]]],
-          hovertemplate: [`Playback · t:${t[j]}s · Alt:${zu[j].toFixed(1)}m<extra></extra>`],
-        },
-        [4],
-      );
-    };
-
-    if (restyleRafRef.current == null) {
-      restyleRafRef.current = requestAnimationFrame(runRestyle);
-    }
+    scheduleRestyle();
 
     return () => {
       if (restyleRafRef.current != null) {

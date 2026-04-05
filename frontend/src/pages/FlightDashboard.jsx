@@ -17,7 +17,10 @@ import TelemetryCharts from '../components/dashboard/TelemetryCharts';
 import DashboardFooter from '../components/dashboard/DashboardFooter';
 
 const TrajectoryPlaybackSection = memo(function TrajectoryPlaybackSection({ trajectory, plotlyReady, maxSp }) {
-  const [playbackIndex, setPlaybackIndex] = useState(null);
+  const [playbackIndex, setPlaybackIndex] = useState(0);
+  useEffect(() => {
+    setPlaybackIndex(0);
+  }, [trajectory]);
   return (
     <>
       <SectionLabel text="3D-Траєкторія · ENU · Колір = Швидкість" gradient="linear-gradient(180deg,#38bdf8,#06b6d4)" />
