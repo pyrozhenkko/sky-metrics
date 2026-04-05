@@ -1,10 +1,8 @@
 import { useState, useCallback, useRef } from 'react';
-import { MessageSquare, Loader, RotateCcw, Zap, AlertTriangle, ExternalLink, Gauge } from 'lucide-react';
+import { MessageSquare, Loader, RotateCcw, Zap, AlertTriangle, Gauge } from 'lucide-react';
 import { computeSpeeds, computeAccels } from '../utils/mathUtils';
 import { MONO, API_BASE } from '../utils/constants';
 import { authHeadersJson } from '../utils/authHeaders';
-
-const GEMINI_QUOTAS_URL = 'https://ai.google.dev/gemini-api/docs/rate-limits';
 
 function buildFlightJsonForLlm({ metrics, meta, aiSummary }) {
   const anomalies =
@@ -33,13 +31,6 @@ function buildFlightJsonForLlm({ metrics, meta, aiSummary }) {
       },
     },
   };
-}
-
-function extractFirstUrl(text) {
-  if (typeof text !== 'string') return null;
-  const m = text.match(/https:\/\/[^\s)\]'"<>]+/);
-  if (!m) return null;
-  return m[0].replace(/[.,;:]+$/, '');
 }
 
 function stripUrls(s) {
@@ -87,13 +78,11 @@ function buildReportView(data) {
   const summary = typeof data?.summary === 'string' ? data.summary : '';
   const recommendation = typeof data?.recommendation === 'string' ? data.recommendation : '';
   const errorKind = typeof data?.error_kind === 'string' ? data.error_kind : '';
-  const docUrlRaw = typeof data?.doc_url === 'string' ? data.doc_url : '';
 
   if (status === 'error') {
     const quota =
       errorKind === 'quota_exceeded' ||
       /429|quota|free_tier|generativelanguage\.googleapis/i.test(summary + recommendation);
-    const docUrl = docUrlRaw || extractFirstUrl(`${recommendation}\n${summary}`) || GEMINI_QUOTAS_URL;
     const messy = summary.length > 800 && (/violations\s*\{|quota_metric:/i.test(summary) || summary.length > 1200);
     const cleanedSummary = messy ? shortenBlobSummary(summary) : summary;
     return {
@@ -102,8 +91,6 @@ function buildReportView(data) {
       title: title || (quota ? 'Ліміт API Gemini' : 'Не вдалося згенерувати звіт'),
       summary: cleanedSummary || (quota ? 'Досягнуто обмеження API Gemini.' : 'Спробуйте пізніше або перевірте налаштування.'),
       recommendation,
-      docUrl,
-      docLabel: quota ? 'Квоти та ліміти Gemini' : 'Довідка Google',
     };
   }
 
@@ -369,26 +356,6 @@ export default function AIAssistantPanel({ metrics, trajectory, meta, aiSummary 
                     {errorRecPlain}
                   </p>
                 ) : null}
-                <a
-                  href={reportView.docUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    marginTop: 14,
-                    fontFamily: MONO,
-                    fontSize: 11,
-                    color: '#7dd3fc',
-                    textDecoration: 'none',
-                    borderBottom: '1px solid rgba(125,211,252,0.35)',
-                    paddingBottom: 1,
-                  }}
-                >
-                  <ExternalLink size={13} aria-hidden />
-                  {reportView.docLabel}
-                </a>
               </div>
             </div>
           </div>
