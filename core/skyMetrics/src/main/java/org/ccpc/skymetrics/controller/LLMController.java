@@ -23,7 +23,7 @@ public class LLMController {
     }
 
     @PostMapping("/ai-report")
-    public ResponseEntity<AiReportResponse> generateAiReport(@RequestBody JsonNode flightAnalyticsPayload) {
+    public ResponseEntity<Object> generateAiReport(@RequestBody JsonNode flightAnalyticsPayload) {
         try {
             return ResponseEntity.ok(pythonIntegrationService.getAiReportFromJson(flightAnalyticsPayload));
         } catch (Exception e) {

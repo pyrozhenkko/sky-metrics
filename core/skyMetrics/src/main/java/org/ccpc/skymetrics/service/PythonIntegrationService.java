@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ccpc.skymetrics.dto.AiReportResponse;
 import org.ccpc.skymetrics.dto.FlightDtos.PythonAnalysisResponse;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
@@ -17,9 +16,10 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.web.reactive.function.client.WebClient;
 
 @Service
-@RequiredArgsConstructor
 public class PythonIntegrationService {
 
     private final RestTemplate restTemplate;
@@ -27,6 +27,14 @@ public class PythonIntegrationService {
 
     @Value("${python.service.url:http://localhost:8000/analyze}")
     private String pythonUrl;
+
+    @Value("${python.service.llm.url:http://localhost:8000/api/call_llm}")
+    private String pythonLlmUrl;
+
+    public PythonIntegrationService(RestTemplate restTemplate, WebClient.Builder webClientBuilder) {
+        this.restTemplate = restTemplate;
+        this.webClient = webClientBuilder.build();
+    }
 
     public PythonAnalysisResponse analyzeLogFile(MultipartFile file) {
         try {

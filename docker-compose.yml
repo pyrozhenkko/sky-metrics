@@ -44,6 +44,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/skymetrics_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: root
+      PYTHON_SERVICE_URL: http://flightlog:8000/api/analyze
+      PYTHON_SERVICE_LLM_URL: http://flightlog:8000/call_llm
     depends_on:
       db:
         condition: service_healthy
