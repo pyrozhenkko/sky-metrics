@@ -1,5 +1,5 @@
 import { User, ChevronLeft, Download, Loader, CheckCircle } from 'lucide-react';
-import { MONO } from '../utils/constants';
+import { MONO } from '../../utils/constants';
 
 export default function DashboardNavbar({ onBack, fileName, pdfExporting, onExportPDF, onAccount }) {
   return (
@@ -26,8 +26,6 @@ export default function DashboardNavbar({ onBack, fileName, pdfExporting, onExpo
         </span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-
-        {/* PDF Export Button */}
         <button
           onClick={onExportPDF}
           disabled={pdfExporting}
@@ -46,7 +44,6 @@ export default function DashboardNavbar({ onBack, fileName, pdfExporting, onExpo
           }
         </button>
 
-        {/* Analysis badge */}
         <div style={{
           display: "flex", alignItems: "center", gap: 7,
           background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.18)",
@@ -56,7 +53,6 @@ export default function DashboardNavbar({ onBack, fileName, pdfExporting, onExpo
           <span style={{ fontSize: 10, color: "#22c55e", letterSpacing: "0.05em" }}>АНАЛІЗ ЗАВЕРШЕНО</span>
         </div>
 
-        {/* File name */}
         <span style={{
           fontSize: 10, color: "#cbd5e1", maxWidth: 140,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
@@ -64,7 +60,6 @@ export default function DashboardNavbar({ onBack, fileName, pdfExporting, onExpo
           {fileName}
         </span>
 
-        {/* Account button */}
         <button
           onClick={onAccount}
           title="Мій акаунт"
@@ -85,7 +80,6 @@ export default function DashboardNavbar({ onBack, fileName, pdfExporting, onExpo
         >
           <User size={14} color="#cbd5e1" />
         </button>
-
       </div>
     </nav>
   );

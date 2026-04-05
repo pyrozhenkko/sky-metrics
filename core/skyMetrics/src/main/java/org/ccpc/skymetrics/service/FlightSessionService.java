@@ -91,10 +91,6 @@ public class FlightSessionService {
         return buildDetailResponse(session);
     }
 
-    // ==========================================
-    // БІЗНЕС-ЛОГІКА ДЛЯ АДМІНІСТРАТОРА (ROLE_ADMIN)
-    // ==========================================
-
     @Transactional(readOnly = true)
     public List<FlightSummaryResponse> getAllSystemFlights(String status) {
         List<FlightSession> sessions;
@@ -123,11 +119,9 @@ public class FlightSessionService {
             throw new RuntimeException("Access denied");
         }
 
-        // Delete physical file
         try {
             fileStorageService.delete(session.getId(), session.getOriginalFilename());
         } catch (Exception e) {
-            // Ignore if file doesn't exist to not fail DB deletion
         }
 
         sessionRepository.delete(session);
@@ -137,7 +131,6 @@ public class FlightSessionService {
     public FlightDetailResponse getFlightDetailsAsAdmin(UUID sessionId) {
         FlightSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found"));
-        // Адмін не має перевірки на userId, тому бачить все
         return buildDetailResponse(session);
     }
 

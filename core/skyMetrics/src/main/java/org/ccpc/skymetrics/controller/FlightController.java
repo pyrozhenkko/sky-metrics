@@ -51,7 +51,6 @@ public class FlightController {
             return ResponseEntity.ok(result);
 
         } catch (Exception e) {
-            // Log the real exception message so it's visible in docker logs
             System.err.println("[UPLOAD ERROR] " + e.getClass().getSimpleName() + ": " + e.getMessage());
             if (e.getCause() != null) {
                 System.err.println("[UPLOAD CAUSE] " + e.getCause().getMessage());

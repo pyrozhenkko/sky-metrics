@@ -1,8 +1,8 @@
 import { Activity, ArrowUp, TrendingUp } from 'lucide-react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
-import Panel from './ui/Panel';
-import ChartTooltip from './ui/ChartTooltip';
-import { MONO } from '../utils/constants';
+import Panel from '../ui/Panel';
+import ChartTooltip from '../ui/ChartTooltip';
+import { MONO } from '../../utils/constants';
 
 export default function TelemetryCharts({ chartData, maxAccelAbs }) {
   return (

@@ -1,5 +1,5 @@
 import { Route, Clock, ArrowUp, Zap, Activity, TrendingUp } from 'lucide-react';
-import StatCard from './ui/StatCard';
+import StatCard from '../ui/StatCard';
 
 function fmtDist(m) {
   return m >= 1000 ? [(m / 1000).toFixed(2), "km"] : [m.toFixed(0), "m"];
