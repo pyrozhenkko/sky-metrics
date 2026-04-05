@@ -23,13 +23,15 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: dev
     ports:
       - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - NODE_ENV=development
+      NODE_ENV: development
+      VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8080}
 
   backend:
     build:

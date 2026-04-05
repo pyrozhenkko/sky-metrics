@@ -1,9 +1,14 @@
 import { useState, useRef, useCallback } from 'react';
-import { User, UploadCloud, FileText, X, Zap } from 'lucide-react';
+import { User, UploadCloud, FileText, X, Zap, Shield } from 'lucide-react';
 import { callApi } from '../utils/api';
 import { MONO } from '../utils/constants';
 
-export default function UploadScreen({ onAnalyzed }) {
+export default function UploadScreen({
+  onAnalyzed,
+  onAccount,
+  onAdmin,
+  isAdmin = false,
+}) {
   const [file, setFile] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -48,6 +53,7 @@ export default function UploadScreen({ onAnalyzed }) {
     setError(null);
     try {
       const response = await callApi(file);
+      setAnalyzing(false);
       onAnalyzed(file.name, response);
     } catch {
       setError("Помилка аналізу. Спробуйте ще раз.");
@@ -77,9 +83,26 @@ export default function UploadScreen({ onAnalyzed }) {
           </span>
           <span className="text-slate-400 font-light"> Analyzer</span>
         </span>
-        <button className="w-9 h-9 rounded-full flex items-center justify-center border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-colors bg-slate-800/50">
-          <User size={17} />
-        </button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button
+              type="button"
+              title="Адмін-панель"
+              onClick={() => onAdmin?.()}
+              className="w-9 h-9 rounded-full flex items-center justify-center border border-slate-700 text-slate-400 hover:text-amber-200 hover:border-amber-600/50 transition-colors bg-slate-800/50"
+            >
+              <Shield size={17} />
+            </button>
+          )}
+          <button
+            type="button"
+            title="Обліковий запис"
+            onClick={() => onAccount?.()}
+            className="w-9 h-9 rounded-full flex items-center justify-center border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-colors bg-slate-800/50"
+          >
+            <User size={17} />
+          </button>
+        </div>
       </nav>
 
       <div className="flex-1 flex items-center justify-center px-4">

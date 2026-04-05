@@ -13,7 +13,10 @@ public class FlightDtos {
             UUID id,
             String originalFilename,
             LocalDateTime uploadedAt,
-            String status
+            String status,
+            Long userId,
+            String username,
+            String ownerEmail
     ) {}
 
     public record FlightDetailResponse(

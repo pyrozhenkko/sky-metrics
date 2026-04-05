@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Mail, Lock, Eye, EyeOff, Loader, AlertCircle } from "lucide-react";
-import { MONO } from "../utils/constants";
+import { API_BASE, MONO } from "../utils/constants";
 
 // ─── LoginScreen ───────────────────────────────────────────────────────────────
 export default function LoginScreen({ onLogin }) {
@@ -35,7 +35,7 @@ export default function LoginScreen({ onLogin }) {
     setError(null);
 
     try {
-      const res = await fetch("http://localhost:8080/api/auth/login", {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: email.trim(), password }),
@@ -52,8 +52,7 @@ export default function LoginScreen({ onLogin }) {
 
       if (!jwt) throw new Error("Сервер не повернув токен");
 
-      localStorage.setItem("jwt_token", jwt);
-      onLogin(jwt);
+      onLogin(jwt, Array.isArray(data.roles) ? data.roles : []);
     } catch (err) {
       setError(err.message || "Не вдалося підключитися до сервера");
     } finally {

@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import {
-  LogOut, ChevronLeft, Route, Clock, ArrowUp, ChevronRight,
-  FileText, AlertCircle, User, Zap, Calendar, Loader,
+  LogOut, ChevronLeft, ChevronRight,
+  FileText, AlertCircle, User, Calendar, Loader, Shield,
 } from "lucide-react";
-import { MONO } from '../utils/constants';
+import { API_BASE, MONO } from '../utils/constants';
+import { wrapFlightDetailForDashboard } from '../utils/api';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtDate(iso) {
@@ -17,28 +18,16 @@ function authHeaders() {
   return { Authorization: `Bearer ${localStorage.getItem("jwt_token")}` };
 }
 
-function toApiResponse(detail) {
-  return {
-    status: "success",
-    data: {
-      metrics: detail.metrics,       // MetricsDto — assumed same field names
-      trajectory: detail.trajectory, // TrajectoryDto — assumed { time, x_east, y_north, z_up }
-      aiSummary: detail.aiSummary,   // forwarded so AIAssistantPanel can show it directly
-    },
-  };
-}
-
-// ─── API calls ────────────────────────────────────────────────────────────────
 async function fetchMyLogs() {
-  const res = await fetch("http://localhost:8080//api/flights", {
+  const res = await fetch(`${API_BASE}/api/flights`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error(`Server error: ${res.status}`);
-  return res.json(); // List<FlightSummaryResponse>
+  return res.json();
 }
 
 async function fetchLogById(id) {
-  const res = await fetch(`http://localhost:8080//api/flights/${id}`, {
+  const res = await fetch(`${API_BASE}/api/flights/${id}`, {
     headers: authHeaders(),
   });
   if (!res.ok) {
@@ -135,7 +124,7 @@ function LogCard({ log, onOpen, index, loading }) {
 //   onBack()
 //   onLogout()
 //   onOpenDashboard(fileName, apiResponse)  ← called after detail fetch succeeds
-export default function AccountPage({ onBack, onLogout, onOpenDashboard }) {
+export default function AccountPage({ onBack, onLogout, onOpenDashboard, isAdmin, onAdmin }) {
   const [logs, setLogs]             = useState([]);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError]   = useState(null);
@@ -165,7 +154,7 @@ export default function AccountPage({ onBack, onLogout, onOpenDashboard }) {
     setDetailError(null);
     try {
       const detail = await fetchLogById(id);
-      onOpenDashboard(detail.originalFilename, toApiResponse(detail));
+      onOpenDashboard(detail.originalFilename, wrapFlightDetailForDashboard(detail));
     } catch (e) {
       setDetailError(e.message);
     } finally {
@@ -174,7 +163,6 @@ export default function AccountPage({ onBack, onLogout, onOpenDashboard }) {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("jwt_token");
     onLogout?.();
   };
 
@@ -208,19 +196,43 @@ export default function AccountPage({ onBack, onLogout, onOpenDashboard }) {
             <span style={{ color: "#cbd5e1", fontWeight: 400 }}> Analyzer</span>
           </span>
         </div>
-        <button
-          onClick={handleLogout}
-          style={{
-            display: "flex", alignItems: "center", gap: 7,
-            background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.18)",
-            borderRadius: 8, padding: "6px 13px", cursor: "pointer",
-            fontFamily: MONO, fontSize: 10, color: "#f87171", transition: "background 0.2s",
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = "rgba(248,113,113,0.14)"}
-          onMouseLeave={e => e.currentTarget.style.background = "rgba(248,113,113,0.07)"}
-        >
-          <LogOut size={12} /> Вийти
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => onAdmin?.()}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                background: "rgba(251,191,36,0.08)",
+                border: "1px solid rgba(251,191,36,0.22)",
+                borderRadius: 8,
+                padding: "6px 13px",
+                cursor: "pointer",
+                fontFamily: MONO,
+                fontSize: 10,
+                color: "#fbbf24",
+              }}
+            >
+              <Shield size={12} /> Адмін
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleLogout}
+            style={{
+              display: "flex", alignItems: "center", gap: 7,
+              background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.18)",
+              borderRadius: 8, padding: "6px 13px", cursor: "pointer",
+              fontFamily: MONO, fontSize: 10, color: "#f87171", transition: "background 0.2s",
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(248,113,113,0.14)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(248,113,113,0.07)"}
+          >
+            <LogOut size={12} /> Вийти
+          </button>
+        </div>
       </nav>
 
       {/* Body */}
