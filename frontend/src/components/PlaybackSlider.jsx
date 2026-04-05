@@ -5,35 +5,69 @@ import { MONO } from '../utils/constants';
 
 export default function PlaybackSlider({ trajectory, onIndexChange }) {
   const n = trajectory.time.length;
-  const [idx, setIdx] = useState(n - 1);
+  const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const intervalRef = useRef(null);
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
   const speeds = computeSpeeds(trajectory);
   const currentSpeed = speeds[idx]?.toFixed(2) ?? "0.00";
 
+  useEffect(() => {
+    setIdx(0);
+    setPlaying(false);
+  }, [trajectory]);
+
+  useEffect(() => {
+    setIdx((i) => Math.max(0, Math.min(i, n - 1)));
+  }, [n]);
+
+  useEffect(() => {
+    onIndexChange(idx);
+  }, [idx, onIndexChange]);
+
   const handleChange = (e) => {
-    const val = parseInt(e.target.value);
-    setIdx(val);
-    onIndexChange(val);
+    setIdx(parseInt(e.target.value, 10));
+  };
+
+  const togglePlayback = () => {
+    setPlaying((prev) => {
+      if (prev) return false;
+      if (idx >= n - 1) {
+        setIdx(0);
+      }
+      return true;
+    });
   };
 
   useEffect(() => {
-    if (playing) {
-      intervalRef.current = setInterval(() => {
+    if (!playing) return;
+    let rafId;
+    let lastStep = performance.now();
+    const msPerStep = 42;
+    const loop = (now) => {
+      if (!playingRef.current) return;
+      const elapsed = now - lastStep;
+      if (elapsed >= msPerStep) {
+        const steps = Math.min(Math.floor(elapsed / msPerStep), n);
+        lastStep += steps * msPerStep;
         setIdx((prev) => {
-          const next = prev >= n - 1 ? 0 : prev + 1;
-          onIndexChange(next);
-          if (next >= n - 1) setPlaying(false);
-          return next;
+          if (prev >= n - 1) return prev;
+          return Math.min(prev + steps, n - 1);
         });
-      }, 60);
-    } else {
-      clearInterval(intervalRef.current);
-    }
-    return () => clearInterval(intervalRef.current);
-  }, [playing, n, onIndexChange]);
+      }
+      rafId = requestAnimationFrame(loop);
+    };
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
+  }, [playing, n]);
 
-  const pct = ((idx / (n - 1)) * 100).toFixed(1);
+  useEffect(() => {
+    if (playing && idx >= n - 1) {
+      setPlaying(false);
+    }
+  }, [playing, idx, n]);
+
+  const pct = (n <= 1 ? 100 : (idx / (n - 1)) * 100).toFixed(1);
 
   return (
     <div style={{
@@ -45,7 +79,7 @@ export default function PlaybackSlider({ trajectory, onIndexChange }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button
-            onClick={() => setPlaying((p) => !p)}
+            onClick={togglePlayback}
             style={{
               width: 28, height: 28, borderRadius: 8,
               background: playing ? "rgba(250,204,21,0.15)" : "rgba(96,165,250,0.12)",

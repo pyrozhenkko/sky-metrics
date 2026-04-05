@@ -1,7 +1,7 @@
-import { User, ChevronLeft, Download, Loader, CheckCircle } from 'lucide-react';
+import { User, ChevronLeft, Download, Loader } from 'lucide-react';
 import { MONO } from '../../utils/constants';
 
-export default function DashboardNavbar({ onBack, fileName, pdfExporting, onExportPDF, onAccount }) {
+export default function DashboardNavbar({ onBack, pdfExporting, onExportPDF, onAccount }) {
   return (
     <nav style={{
       display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "space-between",
@@ -43,22 +43,6 @@ export default function DashboardNavbar({ onBack, fileName, pdfExporting, onExpo
             : <><Download size={11} /> Завантажити звіт PDF</>
           }
         </button>
-
-        <div style={{
-          display: "flex", alignItems: "center", gap: 7,
-          background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.18)",
-          borderRadius: 8, padding: "5px 11px",
-        }}>
-          <CheckCircle size={10} color="#22c55e" />
-          <span style={{ fontSize: 10, color: "#22c55e", letterSpacing: "0.05em" }}>АНАЛІЗ ЗАВЕРШЕНО</span>
-        </div>
-
-        <span style={{
-          fontSize: 10, color: "#cbd5e1", maxWidth: 140,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>
-          {fileName}
-        </span>
 
         <button
           onClick={onAccount}
