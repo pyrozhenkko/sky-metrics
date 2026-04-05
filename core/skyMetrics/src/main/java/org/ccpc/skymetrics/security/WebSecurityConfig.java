@@ -1,6 +1,5 @@
 package org.ccpc.skymetrics.security;
 
-import org.ccpc.skymetrics.security.jwt.AuthEntryPointJwt;
 import org.ccpc.skymetrics.security.jwt.AuthTokenFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

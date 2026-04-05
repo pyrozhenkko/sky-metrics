@@ -1,4 +1,4 @@
-package org.ccpc.skymetrics.security.jwt;
+package org.ccpc.skymetrics.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;

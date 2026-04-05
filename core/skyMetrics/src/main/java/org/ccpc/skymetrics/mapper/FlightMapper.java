@@ -15,6 +15,9 @@ import org.mapstruct.Mapping;
 public interface FlightMapper {
 
     @Mapping(target = "status", expression = "java(session.getStatus().name())")
+    @Mapping(source = "user.id", target = "userId")
+    @Mapping(source = "user.username", target = "username")
+    @Mapping(source = "user.email", target = "ownerEmail")
     FlightSummaryResponse toSummaryResponse(FlightSession session);
 
     @Mapping(target = "status", expression = "java(session.getStatus().name())")
