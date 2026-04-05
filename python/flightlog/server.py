@@ -48,13 +48,27 @@ async def analyze(file: UploadFile = File(...)) -> JSONResponse:
 @app.post("/call_llm")
 async def call_llm(file: UploadFile = File(...)) -> JSONResponse:
     content = await file.read()
-    flight_json = json.loads(content)
+    try:
+        flight_json = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid JSON: {exc!s}") from exc
+
+    if not isinstance(flight_json, dict):
+        raise HTTPException(status_code=422, detail="JSON root must be an object")
 
     llm_data = prepare_llm_payload(flight_json)
-
-    result = generate_ai_report(llm_data)
-
-    return JSONResponse(content=result)
+    raw = generate_ai_report(llm_data).strip()
+    try:
+        obj = json.loads(raw)
+    except json.JSONDecodeError:
+        obj = {
+            "title": "Повідомлення",
+            "overall_status": "error",
+            "summary": raw,
+            "anomalies": [],
+            "recommendation": "",
+        }
+    return JSONResponse(content=obj)
 
 
 def run() -> None:

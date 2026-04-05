@@ -54,7 +54,7 @@ export default function FlightDashboard({ fileName = "mission_042.BIN", apiRespo
     if (apiResponse != null) return apiResponse;
     return generateMockResponse();
   }, [apiResponse]);
-  const { metrics, trajectory } = response.data;
+  const { metrics, trajectory, meta, aiSummary } = response.data;
 
   const step = Math.max(1, Math.floor(trajectory.time.length / 100));
   const accels = computeAccels(trajectory);
@@ -101,7 +101,7 @@ export default function FlightDashboard({ fileName = "mission_042.BIN", apiRespo
         <MetricsGrid metrics={metrics} />
 
         <SectionLabel text="AI Аналітик · Автоматичний звіт" gradient="linear-gradient(180deg,#60a5fa,#818cf8)" />
-        <AIAssistantPanel metrics={metrics} trajectory={trajectory} />
+        <AIAssistantPanel metrics={metrics} trajectory={trajectory} meta={meta} aiSummary={aiSummary} />
 
         <TrajectoryPlaybackSection trajectory={trajectory} plotlyReady={plotlyReady} maxSp={maxSp} />
 

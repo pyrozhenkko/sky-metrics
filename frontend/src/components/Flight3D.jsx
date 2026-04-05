@@ -187,7 +187,8 @@ export default function Flight3D({ trajectory, plotlyReady, playbackIndex }) {
 
   useEffect(() => {
     if (!trajectory) return;
-    const last = z_up.length - 1;
+    const zu = trajectory.z_up ?? [];
+    const last = zu.length - 1;
     const i = Math.max(0, Math.min(playbackIndex ?? 0, last));
     restyleTargetRef.current = { i, trajectory };
     scheduleRestyle();

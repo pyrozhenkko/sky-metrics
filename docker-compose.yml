@@ -55,6 +55,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    environment:
+      GENAI_API_KEY: ${GENAI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
 
 volumes:
   postgres_data:
