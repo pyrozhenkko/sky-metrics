@@ -39,7 +39,6 @@ export default function AIAssistantPanel({ metrics, trajectory }) {
       sharp_altitude_drops: altDrops.slice(0, 5),
     };
 
-    // TODO: change to Gemini api
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",

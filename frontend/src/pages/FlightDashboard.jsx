@@ -11,10 +11,10 @@ import AIAssistantPanel from '../components/AIAssistantPanel';
 import Flight3D from '../components/Flight3D';
 import PlaybackSlider from '../components/PlaybackSlider';
 
-import DashboardNavbar from '../components/DashboardNavbar';
-import MetricsGrid from '../components/MetricsGrid';
-import TelemetryCharts from '../components/TelemetryCharts';
-import DashboardFooter from '../components/DashboardFooter';
+import DashboardNavbar from '../components/dashboard/DashboardNavbar';
+import MetricsGrid from '../components/dashboard/MetricsGrid';
+import TelemetryCharts from '../components/dashboard/TelemetryCharts';
+import DashboardFooter from '../components/dashboard/DashboardFooter';
 
 export default function FlightDashboard({ fileName = "mission_042.BIN", apiResponse = null, onBack, onAccount }) {
   const [plotlyReady, setPlotlyReady] = useState(!!window.Plotly);
@@ -27,7 +27,7 @@ export default function FlightDashboard({ fileName = "mission_042.BIN", apiRespo
     s.src = "https://cdn.jsdelivr.net/npm/plotly.js-dist@2.27.0/plotly.min.js";
     s.onload = () => setPlotlyReady(true);
     document.head.appendChild(s);
-    return () => { try { document.head.removeChild(s); } catch { /* ignore cleanup error */ } };
+    return () => { try { document.head.removeChild(s); } catch { } };
   }, []);
 
   const response = apiResponse || generateMockResponse();

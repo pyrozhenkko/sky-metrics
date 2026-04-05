@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { useAuth } from "./hooks/useAuth";
-import LoginScreen from "./components/LoginScreen";
-import UploadScreen from "./components/UploadScreen";
+import LoginScreen from "./pages/LoginScreen";
+import UploadScreen from "./pages/UploadScreen";
 import FlightDashboard from "./pages/FlightDashboard";
 import AccountPage from "./pages/AccountPage";
 import "./App.css";
 
-// screens: "upload" | "dashboard" | "account"
 export default function App() {
   const { token, login, logout } = useAuth();
-  const [screen, setScreen]       = useState("upload");
-  const [fileName, setFileName]   = useState("");
+  const [screen, setScreen] = useState("upload");
+  const [fileName, setFileName] = useState("");
   const [apiResponse, setApiResponse] = useState(null);
 
   if (!token) {
@@ -22,7 +21,6 @@ export default function App() {
       <AccountPage
         onBack={() => setScreen("upload")}
         onLogout={() => { logout(); setScreen("upload"); }}
-        // Called after GET /my-logs/:id succeeds
         onOpenDashboard={(name, response) => {
           setFileName(name);
           setApiResponse(response);
